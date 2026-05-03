@@ -16,7 +16,29 @@ from reportlab.lib.styles import getSampleStyleSheet
 # =========================
 # PAGE CONFIG
 # =========================
-st.set_page_config(page_title="Email Phishing Detector", page_icon="🔐")
+st.set_page_config(
+    page_title="SIEVRA - Phishing Detector",
+    page_icon="🔐",
+    layout="centered"
+)
+
+# =========================
+# HEADER (BRANDING)
+# =========================
+st.markdown("""
+<h1 style='text-align:center;'>🔐 SIEVRA</h1>
+<h4 style='text-align:center; color:gray;'>
+Smart Intelligent Email Verification & Risk Analyzer
+</h4>
+""", unsafe_allow_html=True)
+
+st.markdown("---")
+
+st.markdown("""
+<div style='text-align:center; color:gray'>
+AI-powered phishing detection system using Hybrid Model (IndoBERT + Rule-Based)
+</div>
+""", unsafe_allow_html=True)
 
 # =========================
 # MODEL CONFIG
