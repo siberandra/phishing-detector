@@ -32,13 +32,6 @@ st.markdown("""
     background: #f9fafb;
     box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
 }
-.status-safe {color: #16a34a; font-weight: bold;}
-.status-warn {color: #f59e0b; font-weight: bold;}
-.status-danger {color: #dc2626; font-weight: bold;}
-.footer {text-align:center; font-size:12px; color:gray;}
-</style>
-""", unsafe_allow_html=True)
-
 .stButton>button {
     width: 100%;
     height: 48px;
@@ -48,6 +41,12 @@ st.markdown("""
 .block-container {
     padding-top: 2rem;
 }
+.status-safe {color: #16a34a; font-weight: bold;}
+.status-warn {color: #f59e0b; font-weight: bold;}
+.status-danger {color: #dc2626; font-weight: bold;}
+.footer {text-align:center; font-size:12px; color:gray;}
+</style>
+""", unsafe_allow_html=True)
 
 # =========================
 # HEADER
