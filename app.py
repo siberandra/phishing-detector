@@ -32,19 +32,57 @@ st.markdown("""
     background: #f9fafb;
     box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
 }
-.stButton>button {
+
+.status-safe {
+    color: #16a34a;
+    font-weight: bold;
+}
+
+.status-warn {
+    color: #f59e0b;
+    font-weight: bold;
+}
+
+.status-danger {
+    color: #dc2626;
+    font-weight: bold;
+}
+
+.footer {
+    text-align: center;
+    font-size: 12px;
+    color: gray;
+}
+
+/* BUTTON */
+.stButton > button {
     width: 100%;
     height: 48px;
     border-radius: 10px;
     font-weight: bold;
 }
+
+/* SPACING */
 .block-container {
     padding-top: 2rem;
 }
-.status-safe {color: #16a34a; font-weight: bold;}
-.status-warn {color: #f59e0b; font-weight: bold;}
-.status-danger {color: #dc2626; font-weight: bold;}
-.footer {text-align:center; font-size:12px; color:gray;}
+
+/* Card hover effect */
+.main-card:hover {
+    box-shadow: 0px 8px 20px rgba(0,0,0,0.1);
+    transition: 0.3s;
+}
+
+/* Input style */
+input, textarea {
+    border-radius: 10px !important;
+}
+
+/* Progress bar smoother */
+div[data-testid="stProgressBar"] > div > div {
+    border-radius: 10px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
