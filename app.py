@@ -9,7 +9,6 @@ import pandas as pd
 from datetime import datetime
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-# PDF
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 
@@ -17,28 +16,40 @@ from reportlab.lib.styles import getSampleStyleSheet
 # PAGE CONFIG
 # =========================
 st.set_page_config(
-    page_title="SIEVRA - Phishing Detector",
-    page_icon="🔐",
+    page_title="SIEVRA",
+    page_icon="🛡️",
     layout="centered"
 )
 
 # =========================
-# HEADER (BRANDING)
+# CUSTOM STYLE
 # =========================
 st.markdown("""
-<h1 style='text-align:center;'>🔐 SIEVRA</h1>
-<h4 style='text-align:center; color:gray;'>
-Smart Intelligent Email Verification & Risk Analyzer
-</h4>
+<style>
+.main-card {
+    padding: 25px;
+    border-radius: 15px;
+    background: #f9fafb;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
+}
+.status-safe {color: #16a34a; font-weight: bold;}
+.status-warn {color: #f59e0b; font-weight: bold;}
+.status-danger {color: #dc2626; font-weight: bold;}
+.footer {text-align:center; font-size:12px; color:gray;}
+</style>
+""", unsafe_allow_html=True)
+
+# =========================
+# HEADER
+# =========================
+st.markdown("""
+<div style='text-align:center'>
+    <h1>🛡️ SIEVRA</h1>
+    <p style='color:gray'>Smart Email Verification & Risk Analyzer</p>
+</div>
 """, unsafe_allow_html=True)
 
 st.markdown("---")
-
-st.markdown("""
-<div style='text-align:center; color:gray'>
-AI-powered phishing detection system using Hybrid Model (IndoBERT + Rule-Based)
-</div>
-""", unsafe_allow_html=True)
 
 # =========================
 # MODEL CONFIG
@@ -48,11 +59,8 @@ ZIP_FILE = "phishing_model.zip"
 FILE_ID = "1DcNpMhCbdIuoyg6VjQCrTpLGiuI4yI2w"
 GDRIVE_URL = f"https://drive.google.com/uc?id={FILE_ID}"
 
-# =========================
-# DOWNLOAD MODEL
-# =========================
 if not os.path.exists(MODEL_DIR):
-    st.info("Downloading model...")
+    st.info("🔄 Downloading model...")
     if not os.path.exists(ZIP_FILE):
         gdown.download(GDRIVE_URL, ZIP_FILE, quiet=False)
 
@@ -96,9 +104,6 @@ def urgency_score(text):
 def typo_score(text):
     return int(bool(re.search(r'[a-z]+[0-9]+[a-z]+', text)))
 
-# =========================
-# FILE CHECK
-# =========================
 def check_file(filename):
     filename = filename.lower()
     score = 0
@@ -119,7 +124,7 @@ def check_file(filename):
     return score, reasons
 
 # =========================
-# RULE BASED
+# RULE
 # =========================
 def rule_based(text, sender, file=None):
     score = 0
@@ -174,18 +179,18 @@ def hybrid(text, sender, file=None):
         out = model(**inputs)
         probs = torch.softmax(out.logits, dim=1).cpu().numpy()[0]
 
-    ai = probs[1]
+    ai = float(probs[1])
     rule, reasons = rule_based(text, sender, file)
 
     final = (ai*0.7) + ((rule/100)*0.3)
-    return final, reasons
+    return float(final), reasons
 
 # =========================
-# LOGGING
+# LOG
 # =========================
-def log_data(sender, text, score, status):
+def log_data(sender, score, status):
     file = "logs.csv"
-    data = pd.DataFrame([{
+    new = pd.DataFrame([{
         "time": datetime.now(),
         "sender": sender,
         "score": score,
@@ -194,24 +199,24 @@ def log_data(sender, text, score, status):
 
     if os.path.exists(file):
         old = pd.read_csv(file)
-        data = pd.concat([old, data])
+        new = pd.concat([old, new])
 
-    data.to_csv(file, index=False)
+    new.to_csv(file, index=False)
 
 # =========================
 # PDF
 # =========================
-def make_pdf(sender, text, score, status, reasons):
+def make_pdf(sender, score, status, reasons):
     path = "report.pdf"
     doc = SimpleDocTemplate(path)
     style = getSampleStyleSheet()
 
     content = []
-    content.append(Paragraph("Phishing Detection Report", style["Title"]))
+    content.append(Paragraph("SIEVRA Report", style["Title"]))
     content.append(Spacer(1,10))
     content.append(Paragraph(f"Sender: {sender}", style["Normal"]))
     content.append(Paragraph(f"Status: {status}", style["Normal"]))
-    content.append(Paragraph(f"Score: {score}", style["Normal"]))
+    content.append(Paragraph(f"Score: {round(score,3)}", style["Normal"]))
     content.append(Spacer(1,10))
 
     for r in reasons:
@@ -221,41 +226,63 @@ def make_pdf(sender, text, score, status, reasons):
     return path
 
 # =========================
-# UI
+# UI CARD
 # =========================
-st.title("🔐 Phishing Detector")
+st.markdown("<div class='main-card'>", unsafe_allow_html=True)
 
-sender = st.text_input("Sender Email")
-text = st.text_area("Email Content")
-file = st.file_uploader("Upload File")
+col1, col2 = st.columns(2)
 
-if st.button("Analyze"):
+with col1:
+    sender = st.text_input("📧 Sender Email")
+
+with col2:
+    file = st.file_uploader("📎 Upload File")
+
+text = st.text_area("📝 Email Content", height=150)
+
+analyze = st.button("🚀 Analyze Now")
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# =========================
+# RESULT
+# =========================
+if analyze:
 
     score, reasons = hybrid(text, sender, file)
 
-    if score < 0.3:
+    safe_score = max(0.0, min(float(score), 1.0))
+
+    if safe_score < 0.3:
         status = "SAFE"
-    elif score < 0.6:
+        css = "status-safe"
+    elif safe_score < 0.6:
         status = "SUSPICIOUS"
+        css = "status-warn"
     else:
         status = "PHISHING"
+        css = "status-danger"
 
-    st.write("Status:", status)
-    st.write("Score:", round(score,3))
-    st.progress(min(score,1.0))
+    st.markdown("### 🔍 Result")
+    st.markdown(f"<p class='{css}'>Status: {status}</p>", unsafe_allow_html=True)
 
-    st.write("Reasons:")
+    st.progress(safe_score)
+    st.write(f"Confidence: {safe_score*100:.1f}%")
+
+    st.markdown("### 📌 Reasons")
     for r in reasons:
-        st.write("-", r)
+        st.write(f"• {r}")
 
     # LOG
-    log_data(sender, text, score, status)
+    log_data(sender, safe_score, status)
 
     # PDF
-    pdf = make_pdf(sender, text, score, status, reasons)
+    pdf = make_pdf(sender, safe_score, status, reasons)
     with open(pdf, "rb") as f:
-        st.download_button("Download PDF", f, file_name="report.pdf")
+        st.download_button("📄 Download Report", f, "report.pdf")
 
+# =========================
 # FOOTER
+# =========================
 st.markdown("---")
-st.markdown("© 2026 Vicky Chandra • Thesis Research • Universitas Gunadarma")
+st.markdown("<div class='footer'>© 2026 Vicky Chandra • Thesis Research • Universitas Gunadarma</div>", unsafe_allow_html=True)
