@@ -16,7 +16,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 # =========================
 # PAGE CONFIG
 # =========================
-st.set_page_config(page_title="Phishing Detector", page_icon="🔐")
+st.set_page_config(page_title="Email Phishing Detector", page_icon="🔐")
 
 # =========================
 # MODEL CONFIG
