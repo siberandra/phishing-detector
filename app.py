@@ -220,6 +220,21 @@ def rule_based(text, sender, file=None):
         score += fscore
         reasons += freason
 
+    # =========================
+    # SUSPICIOUS DOMAIN PATTERN (NEW)
+    # =========================
+    domain = s.split("@")[-1]
+    
+    # Banyak tanda strip (-) di domain
+    if domain.count("-") >= 1:
+        score += 15
+        reasons.append("Suspicious domain pattern (hyphen usage)")
+    
+    # Domain terlalu panjang (indikasi fake domain)
+    if len(domain) > 20:
+        score += 15
+        reasons.append("Unusually long domain name") 
+
     return score, reasons
 
 # =========================
