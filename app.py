@@ -292,8 +292,6 @@ file = st.file_uploader("📎 Upload File (optional)")
 
 analyze = st.button("🚀 Analyze Email", use_container_width=True)
 
-st.markdown("---")
-
 st.markdown("</div>", unsafe_allow_html=True)
 
 if analyze:
@@ -315,6 +313,7 @@ if analyze:
     # ======================
     # RESULT HEADER
     # ======================
+    st.markdown("---")
     st.markdown("## 🔍 Analysis Result")
     st.markdown(f"<p class='{css}'>Status: {status}</p>", unsafe_allow_html=True)
 
