@@ -39,6 +39,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+.stButton>button {
+    width: 100%;
+    height: 48px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+.block-container {
+    padding-top: 2rem;
+}
+
 # =========================
 # HEADER
 # =========================
@@ -109,17 +119,19 @@ def check_file(filename):
     score = 0
     reasons = []
 
+    is_double = bool(re.search(r'\.(pdf|docx|jpg)\.(exe|bat|js)', filename))
+    is_multi = len(filename.split(".")) > 2
+
     if any(filename.endswith(ext) for ext in danger_ext):
         score += 50
-        reasons.append("Dangerous extension")
 
-    if re.search(r'\.(pdf|docx|jpg)\.(exe|bat|js)', filename):
+    if is_double:
         score += 50
-        reasons.append("Double extension")
+        reasons.append("Double extension (file disguise attack)")
 
-    if len(filename.split(".")) > 2:
+    elif is_multi:
         score += 20
-        reasons.append("Multi extension")
+        reasons.append("Suspicious multi-extension file")
 
     return score, reasons
 
@@ -203,27 +215,27 @@ def log_data(sender, score, status):
 
     new.to_csv(file, index=False)
 
-# =========================
-# PDF
-# =========================
-def make_pdf(sender, score, status, reasons):
-    path = "report.pdf"
-    doc = SimpleDocTemplate(path)
-    style = getSampleStyleSheet()
+# # =========================
+# # PDF
+# # =========================
+# def make_pdf(sender, score, status, reasons):
+#     path = "report.pdf"
+#     doc = SimpleDocTemplate(path)
+#     style = getSampleStyleSheet()
 
-    content = []
-    content.append(Paragraph("SIEVRA Report", style["Title"]))
-    content.append(Spacer(1,10))
-    content.append(Paragraph(f"Sender: {sender}", style["Normal"]))
-    content.append(Paragraph(f"Status: {status}", style["Normal"]))
-    content.append(Paragraph(f"Score: {round(score,3)}", style["Normal"]))
-    content.append(Spacer(1,10))
+#     content = []
+#     content.append(Paragraph("SIEVRA Report", style["Title"]))
+#     content.append(Spacer(1,10))
+#     content.append(Paragraph(f"Sender: {sender}", style["Normal"]))
+#     content.append(Paragraph(f"Status: {status}", style["Normal"]))
+#     content.append(Paragraph(f"Score: {round(score,3)}", style["Normal"]))
+#     content.append(Spacer(1,10))
 
-    for r in reasons:
-        content.append(Paragraph(f"- {r}", style["Normal"]))
+#     for r in reasons:
+#         content.append(Paragraph(f"- {r}", style["Normal"]))
 
-    doc.build(content)
-    return path
+#     doc.build(content)
+#     return path
 
 # =========================
 # UI CARD
@@ -253,6 +265,9 @@ if analyze:
 
     safe_score = max(0.0, min(float(score), 1.0))
 
+    # ======================
+    # STATUS
+    # ======================
     if safe_score < 0.3:
         status = "SAFE"
         css = "status-safe"
@@ -263,23 +278,37 @@ if analyze:
         status = "PHISHING"
         css = "status-danger"
 
-    st.markdown("### 🔍 Result")
+    # ======================
+    # OUTPUT
+    # ======================
+    st.markdown("### 🔍 Analysis Result")
     st.markdown(f"<p class='{css}'>Status: {status}</p>", unsafe_allow_html=True)
 
     st.progress(safe_score)
-    st.write(f"Confidence: {safe_score*100:.1f}%")
 
-    st.markdown("### 📌 Reasons")
-    for r in reasons:
-        st.write(f"• {r}")
+    # 🔥 GANTI CONFIDENCE JADI LEBIH MASUK AKAL
+    if status == "PHISHING":
+        st.write(f"⚠️ Risk Score: {safe_score*100:.1f}%")
+    elif status == "SAFE":
+        st.write(f"✅ Safety Score: {(1-safe_score)*100:.1f}%")
+    else:
+        st.write(f"⚖️ Uncertainty Score: {abs(0.5-safe_score)*200:.1f}%")
 
+    # ======================
+    # REASONS
+    # ======================
+    st.markdown("### 📌 Detection Reasons")
+
+    if reasons:
+        for r in reasons:
+            st.write(f"• {r}")
+    else:
+        st.write("No strong suspicious indicators detected")
+
+    # ======================
     # LOG
+    # ======================
     log_data(sender, safe_score, status)
-
-    # PDF
-    pdf = make_pdf(sender, safe_score, status, reasons)
-    with open(pdf, "rb") as f:
-        st.download_button("📄 Download Report", f, "report.pdf")
 
 # =========================
 # FOOTER
