@@ -83,6 +83,11 @@ div[data-testid="stProgressBar"] > div > div {
     border-radius: 10px;
 }
 
+/* kasih jarak antar section */
+section.main > div {
+    padding-bottom: 10px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -279,36 +284,28 @@ def log_data(sender, score, status):
 # =========================
 st.markdown("<div class='main-card'>", unsafe_allow_html=True)
 
-col1, col2 = st.columns(2)
+sender = st.text_input("📧 Sender Email")
 
-with col1:
-    sender = st.text_input("📧 Sender Email")
+text = st.text_area("📝 Email Content", height=180)
 
-with col2:
-    file = st.file_uploader("📎 Upload File")
+file = st.file_uploader("📎 Upload File (optional)")
 
-text = st.text_area("📝 Email Content", height=150)
+analyze = st.button("🚀 Analyze Email", use_container_width=True)
 
-analyze = st.button("🚀 Analyze Now")
+st.markdown("---")
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-# =========================
-# RESULT
-# =========================
 if analyze:
 
     score, reasons = hybrid(text, sender, file)
+    score = max(0.0, min(float(score), 1.0))
 
-    safe_score = max(0.0, min(float(score), 1.0))
-
-    # ======================
     # STATUS
-    # ======================
-    if safe_score < 0.3:
+    if score < 0.3:
         status = "SAFE"
         css = "status-safe"
-    elif safe_score < 0.6:
+    elif score < 0.6:
         status = "SUSPICIOUS"
         css = "status-warn"
     else:
@@ -316,20 +313,16 @@ if analyze:
         css = "status-danger"
 
     # ======================
-    # OUTPUT
+    # RESULT HEADER
     # ======================
-    st.markdown("### 🔍 Analysis Result")
+    st.markdown("## 🔍 Analysis Result")
     st.markdown(f"<p class='{css}'>Status: {status}</p>", unsafe_allow_html=True)
 
-    st.progress(safe_score)
-
-    # 🔥 GANTI CONFIDENCE JADI LEBIH MASUK AKAL
-    if status == "PHISHING":
-        st.write(f"⚠️ Risk Score: {safe_score*100:.1f}%")
-    elif status == "SAFE":
-        st.write(f"✅ Safety Score: {(1-safe_score)*100:.1f}%")
-    else:
-        st.write(f"⚖️ Uncertainty Score: {abs(0.5-safe_score)*200:.1f}%")
+    # ======================
+    # PROGRESS BAR (PHISHING SCORE)
+    # ======================
+    st.progress(score)
+    st.write(f"⚠️ Phishing Risk Score: {score*100:.1f}%")
 
     # ======================
     # REASONS
@@ -342,10 +335,8 @@ if analyze:
     else:
         st.write("No strong suspicious indicators detected")
 
-    # ======================
     # LOG
-    # ======================
-    log_data(sender, safe_score, status)
+    log_data(sender, score, status)
 
 # =========================
 # FOOTER
