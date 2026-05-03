@@ -26,12 +26,12 @@ st.set_page_config(
 # =========================
 st.markdown("""
 <style>
-.main-card {
-    padding: 25px;
-    border-radius: 15px;
-    background: #f9fafb;
-    box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
-}
+# .main-card {
+#     padding: 25px;
+#     border-radius: 15px;
+#     background: #f9fafb;
+#     box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
+# }
 
 .status-safe {
     color: #16a34a;
