@@ -94,7 +94,22 @@ section.main > div {
 # =========================
 # HEADER
 # =========================
-lang = st.selectbox("🌐 Language / Bahasa", ["English", "Indonesia"])
+with st.sidebar:
+    st.markdown("## ⚙️ Settings")
+
+    lang = st.selectbox("🌐 Language", ["English", "Indonesia"])
+
+    st.markdown("---")
+    st.markdown("## 📜 History")
+
+    if os.path.exists("logs.csv"):
+        df = pd.read_csv("logs.csv")
+        st.dataframe(df.tail(10), use_container_width=True)
+
+        with open("logs.csv", "rb") as f:
+            st.download_button("⬇️ Download Logs", f, "logs.csv")
+    else:
+        st.info("No logs yet")
 
 st.markdown("""
 <div style='text-align:center'>
@@ -221,6 +236,12 @@ def rule_based(text, sender, file=None):
         fscore, freason = check_file(file.name)
         score += fscore
         reasons += freason
+        
+    # FILE ONLY ATTACK
+    if file and not text.strip():
+        if any(file.name.lower().endswith(ext) for ext in danger_ext):
+            score += 40
+            reasons.append("File-only message with dangerous attachment")
 
     # =========================
     # SUSPICIOUS DOMAIN PATTERN (NEW)
@@ -242,6 +263,16 @@ def rule_based(text, sender, file=None):
 # =========================
 # HYBRID
 # =========================
+email_valid = re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", sender)
+
+if not sender:
+    st.warning("Sender email is required" if lang=="English" else "Email pengirim wajib diisi")
+    st.stop()
+
+if not email_valid:
+    st.warning("Invalid email format" if lang=="English" else "Format email tidak valid")
+    st.stop()
+
 def hybrid(text, sender, file=None):
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
     inputs = {k:v.to(device) for k,v in inputs.items()}
@@ -334,14 +365,16 @@ def t(key):
 st.markdown("<div class='main-card'>", unsafe_allow_html=True)
 
 sender = st.text_input(
-    t("sender"),
-    placeholder="example@company.com"
+    t("sender") + " *",
+    placeholder="example@company.com" if lang=="English" else "K"
 )
 
 text = st.text_area(
     t("content"),
     height=180,
-    placeholder="e.g. Your account will be suspended, click here to verify..."
+    placeholder="e.g. Your account will be suspended..." 
+    if lang=="English" 
+    else "contoh: akun Anda akan diblokir, klik link berikut..."
 )
 
 file = st.file_uploader(t("upload"))
@@ -363,15 +396,19 @@ if analyze:
                 "No suspicious patterns detected",
                 "No malicious links or attachments found",
                 "Sender appears normal"
+            ] if lang=="English" else [
+                "Tidak ditemukan pola mencurigakan",
+                "Tidak ada link atau file berbahaya",
+                "Pengirim terlihat normal"
             ]
         else:
-            reasons.insert(0, "Low risk detected based on analysis")
+            reasons.insert(0, "Low risk detected" if lang=="English" else "Risiko rendah terdeteksi")
     
     elif score < 0.6:
-        reasons.insert(0, "Some suspicious indicators detected")
+        reasons.insert(0, "Some suspicious indicators detected" if lang=="English" else "Beberapa indikasi mencurigakan ditemukan")
     
     else:
-        reasons.insert(0, "High risk phishing indicators detected")
+        reasons.insert(0, "High risk phishing indicators detected" if lang=="English" else "Indikasi phishing berisiko tinggi terdeteksi")
 
     # STATUS
     if score < 0.3:
@@ -387,6 +424,28 @@ if analyze:
     # ======================
     # RESULT HEADER
     # ======================
+    def translate_reason(r):
+        if lang == "English":
+            return r
+    
+        mapping = {
+            "Trusted domain": "Domain terpercaya",
+            "Impersonation": "Indikasi penyamaran",
+            "Short URL": "URL pendek mencurigakan",
+            "IP URL": "Link menggunakan IP",
+            "Many links": "Terlalu banyak link",
+            "Urgency language": "Bahasa mendesak / promosi",
+            "Typo pattern": "Pola typo mencurigakan",
+            "Suspicious domain pattern (hyphen usage)": "Domain mencurigakan (mengandung tanda -)",
+            "Unusually long domain name": "Nama domain terlalu panjang",
+            "Double extension (file disguise attack)": "Ekstensi ganda (penyamaran file)",
+            "Suspicious multi-extension file": "File dengan banyak ekstensi mencurigakan",
+            "File-only message with dangerous attachment": "Pesan hanya berisi file berbahaya"
+        }
+    
+        return mapping.get(r, r)
+
+    
     st.markdown(t("result"))
     st.markdown(f"<p class='{css}'>Status: {status}</p>", unsafe_allow_html=True)
     
@@ -396,7 +455,7 @@ if analyze:
 
     if reasons:
         for r in reasons:
-            st.write(f"• {r}")
+            st.write(f"• {translate_reason(r)}")
     else:
         st.write("No strong suspicious indicators detected")
 
