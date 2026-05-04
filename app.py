@@ -110,6 +110,20 @@ with st.sidebar:
             st.download_button("⬇️ Download Logs", f, "logs.csv")
     else:
         st.info("No logs yet")
+        
+    # =========================
+    # CLEAR LOGS
+    # =========================
+    st.markdown("---")
+    
+    if st.button("🗑️ Clear History" if lang=="English" else "🗑️ Hapus Riwayat"):
+        
+        if os.path.exists("logs.csv"):
+            os.remove("logs.csv")
+            st.success("Logs cleared successfully" if lang=="English" else "Riwayat berhasil dihapus")
+            st.rerun()
+        else:
+            st.info("No logs to delete" if lang=="English" else "Tidak ada riwayat untuk dihapus")
 
 st.markdown("""
 <div style='text-align:center'>
