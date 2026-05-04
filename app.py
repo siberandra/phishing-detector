@@ -381,7 +381,7 @@ email_valid = bool(re.match(email_pattern, sender)) if sender else False
 
 if not sender:
     st.markdown(
-        f"<p style='color:#f59e0b; font-size:13px; margin-top:-10px; font-style:italic;'>⚠️ "
+        f"<p style='color:#f59e0b; font-size:13px; margin-top:-10px; font-style:italic;'>"
         + ("Sender email is required"
            if lang=="English"
            else "Email pengirim wajib diisi")
