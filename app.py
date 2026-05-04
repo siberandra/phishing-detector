@@ -95,7 +95,13 @@ section.main > div {
 # HEADER
 # =========================
 with st.sidebar:
-    st.markdown("## ⚙️ Settings")
+    
+    st.markdown("""
+    <div style='text-align:center'>
+        <h1>🛡️</h1>
+        <h1>SIEVRA</h1>
+    </div>
+    """, unsafe_allow_html=True)
 
     lang = st.selectbox("🌐 Language", ["English", "Indonesia"])
 
@@ -113,9 +119,7 @@ with st.sidebar:
         
     # =========================
     # CLEAR LOGS
-    # =========================
-    st.markdown("---")
-    
+    # =========================    
     if st.button("🗑️ Clear History" if lang=="English" else "🗑️ Hapus Riwayat"):
         
         if os.path.exists("logs.csv"):
