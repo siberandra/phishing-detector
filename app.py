@@ -356,7 +356,7 @@ st.markdown("<div class='main-card'>", unsafe_allow_html=True)
 
 sender = st.text_input(
     t("sender") + " *",
-    placeholder="example@company.com" if lang=="English" else "K"
+    placeholder="example@company.com" if lang=="English" else "contoh@email.com"
 )
 
 text = st.text_area(
