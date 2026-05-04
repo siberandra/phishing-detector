@@ -525,4 +525,4 @@ if analyze:
 # FOOTER
 # =========================
 st.markdown("---")
-st.markdown("<div class='footer'>© 2026 Vicky Chandra • Undergraduate Thesis • Universitas Gunadarma</div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>Copyright © 2026 Vicky Chandra. Some Rights Reserved.</div>", unsafe_allow_html=True)
