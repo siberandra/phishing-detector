@@ -98,8 +98,9 @@ with st.sidebar:
 
     st.markdown("""
     <div style='text-align:center; margin-top:10px; margin-bottom:10px;'>
-        <div style='font-size:40px;'>🛡️</div>
-        <div style='font-size:22px; font-weight:bold;'>SIEVRA</div>
+        st.markdown("# 🛡️ SIEVRA")
+        # <div style='font-size:40px;'>🛡️</div>
+        # <div style='font-size:22px; font-weight:bold;'>SIEVRA</div>
         <div style='font-size:13px; color:gray;'>Smart Email Verification & Risk Analyzer</div>
     </div>
     """, unsafe_allow_html=True)
