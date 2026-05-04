@@ -391,7 +391,7 @@ if not sender:
 
 elif sender and not email_valid:
     st.markdown(
-        f"<p style='color:#f59e0b; font-size:13px; margin-top:-10px; font-style:italic;'>⚠️ "
+        f"<p style='color:#f59e0b; font-size:13px; margin-top:-10px; font-style:italic;'>"
         + ("Please enter a valid email format (e.g. example@domain.com)"
            if lang=="English"
            else "Format email tidak valid (contoh: nama@email.com)")
