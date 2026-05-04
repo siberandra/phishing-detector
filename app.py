@@ -280,20 +280,34 @@ def hybrid(text, sender, file=None):
 # =========================
 # LOG
 # =========================
-def log_data(sender, score, status):
-    file = "logs.csv"
+def extract_urls(text):
+    return re.findall(r'http\S+|www\S+', text)
+
+def log_data(sender, text, file, score, status):
+    file_path = "logs.csv"
+
+    urls = extract_urls(text)
+    url_str = ", ".join(urls) if urls else "-"
+
+    file_ext = "-"
+    if file:
+        file_ext = file.name.split(".")[-1]
+
     new = pd.DataFrame([{
         "time": datetime.now(),
         "sender": sender,
-        "score": score,
+        "body": text,
+        "url": url_str,
+        "file_ext": file_ext,
+        "risk_score": round(score, 4),
         "status": status
     }])
 
-    if os.path.exists(file):
-        old = pd.read_csv(file)
+    if os.path.exists(file_path):
+        old = pd.read_csv(file_path)
         new = pd.concat([old, new])
 
-    new.to_csv(file, index=False)
+    new.to_csv(file_path, index=False)
 
 # # =========================
 # # PDF
@@ -358,6 +372,32 @@ sender = st.text_input(
     t("sender") + " *",
     placeholder="example@company.com" if lang=="English" else "contoh@email.com"
 )
+
+# =========================
+# REAL-TIME VALIDATION
+# =========================
+email_pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+email_valid = bool(re.match(email_pattern, sender)) if sender else False
+
+if not sender:
+    st.markdown(
+        f"<p style='color:#f59e0b; font-size:13px; margin-top:-10px; font-style:italic;'>⚠️ "
+        + ("Sender email is required"
+           if lang=="English"
+           else "Email pengirim wajib diisi")
+        + "</p>",
+        unsafe_allow_html=True
+    )
+
+elif sender and not email_valid:
+    st.markdown(
+        f"<p style='color:#f59e0b; font-size:13px; margin-top:-10px; font-style:italic;'>⚠️ "
+        + ("Please enter a valid email format (e.g. example@domain.com)"
+           if lang=="English"
+           else "Format email tidak valid (contoh: nama@email.com)")
+        + "</p>",
+        unsafe_allow_html=True
+    )
 
 text = st.text_area(
     t("content"),
@@ -460,7 +500,7 @@ if analyze:
         st.write("No strong suspicious indicators detected")
 
     # LOG
-    log_data(sender, score, status)
+    log_data(sender, text, file, score, status)
 
 # =========================
 # FOOTER
