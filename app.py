@@ -94,6 +94,8 @@ section.main > div {
 # =========================
 # HEADER
 # =========================
+lang = st.selectbox("🌐 Language / Bahasa", ["English", "Indonesia"])
+
 st.markdown("""
 <div style='text-align:center'>
     <h1>🛡️ SIEVRA</h1>
@@ -297,15 +299,53 @@ def log_data(sender, score, status):
 # =========================
 # UI CARD
 # =========================
+
+def t(key):
+    translations = {
+        "English": {
+            "sender": "📧 Sender Email",
+            "content": "📝 Email Content",
+            "upload": "📎 Upload File (optional)",
+            "analyze": "🚀 Analyze Email",
+            "result": "## 🔍 Analysis Result",
+            "reasons": "### 📌 Detection Reasons",
+            "score": "⚠️ Phishing Risk Score",
+            "safe": "SAFE",
+            "suspicious": "SUSPICIOUS",
+            "phishing": "PHISHING",
+            "no_reason": "No strong suspicious indicators detected"
+        },
+        "Indonesia": {
+            "sender": "📧 Email Pengirim",
+            "content": "📝 Isi Email",
+            "upload": "📎 Upload File (opsional)",
+            "analyze": "🚀 Analisis Email",
+            "result": "## 🔍 Hasil Analisis",
+            "reasons": "### 📌 Alasan Deteksi",
+            "score": "⚠️ Skor Risiko Phishing",
+            "safe": "AMAN",
+            "suspicious": "MENCURIGAKAN",
+            "phishing": "PHISHING",
+            "no_reason": "Tidak ditemukan indikasi mencurigakan"
+        }
+    }
+    return translations[lang][key]
+
 st.markdown("<div class='main-card'>", unsafe_allow_html=True)
 
-sender = st.text_input("📧 Sender Email")
+sender = st.text_input(
+    t("sender"),
+    placeholder="example@company.com"
+)
 
-text = st.text_area("📝 Email Content", height=180)
+text = st.text_area(
+    t("content"),
+    height=180,
+    placeholder="e.g. Your account will be suspended, click here to verify..."
+)
 
-file = st.file_uploader("📎 Upload File (optional)")
-
-analyze = st.button("🚀 Analyze Email", use_container_width=True)
+file = st.file_uploader(t("upload"))
+analyze = st.button(t("analyze"), use_container_width=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -314,40 +354,45 @@ if analyze:
     score, reasons = hybrid(text, sender, file)
     score = max(0.0, min(float(score), 1.0))
 
+    # ======================
+    # CONTEXTUAL REASON FIX
+    # ======================
+    if score < 0.3:
+        if not reasons:
+            reasons = [
+                "No suspicious patterns detected",
+                "No malicious links or attachments found",
+                "Sender appears normal"
+            ]
+        else:
+            reasons.insert(0, "Low risk detected based on analysis")
+    
+    elif score < 0.6:
+        reasons.insert(0, "Some suspicious indicators detected")
+    
+    else:
+        reasons.insert(0, "High risk phishing indicators detected")
+
     # STATUS
     if score < 0.3:
-        status = "SAFE"
+        status = t("safe")
         css = "status-safe"
     elif score < 0.6:
-        status = "SUSPICIOUS"
+        status = t("suspicious")
         css = "status-warn"
     else:
-        status = "PHISHING"
+        status = t("phishing")
         css = "status-danger"
 
     # ======================
     # RESULT HEADER
     # ======================
-    st.markdown("---")
-    st.markdown("## 🔍 Analysis Result")
+    st.markdown(t("result"))
     st.markdown(f"<p class='{css}'>Status: {status}</p>", unsafe_allow_html=True)
-
-    # ======================
-    # PROGRESS BAR (PHISHING SCORE)
-    # ======================
-    st.progress(score)
-    st.write(f"⚠️ Phishing Risk Score: {score*100:.1f}%")
-
-    # ======================
-    # REASONS
-    # ======================
-    st.markdown("### 📌 Detection Reasons")
-
-    if reasons:
-        for r in reasons:
-            st.write(f"• {r}")
-    else:
-        st.write("No strong suspicious indicators detected")
+    
+    st.write(f"{t('score')}: {score*100:.1f}%")
+    
+    st.markdown(t("reasons"))
 
     # LOG
     log_data(sender, score, status)
@@ -356,4 +401,4 @@ if analyze:
 # FOOTER
 # =========================
 st.markdown("---")
-st.markdown("<div class='footer'>© 2026 Vicky Chandra • Thesis Research • Universitas Gunadarma</div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>© 2026 Vicky Chandra • Undergraduate Thesis • Universitas Gunadarma</div>", unsafe_allow_html=True)
