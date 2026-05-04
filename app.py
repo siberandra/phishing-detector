@@ -394,6 +394,12 @@ if analyze:
     
     st.markdown(t("reasons"))
 
+    if reasons:
+        for r in reasons:
+            st.write(f"• {r}")
+    else:
+        st.write("No strong suspicious indicators detected")
+
     # LOG
     log_data(sender, score, status)
 
