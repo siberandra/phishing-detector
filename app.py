@@ -95,11 +95,11 @@ section.main > div {
 # HEADER
 # =========================
 with st.sidebar:
-    
+
     st.markdown("""
-    <div style='text-align:center'>
-        <h1>🛡️</h1>
-        <h1>SIEVRA</h1>
+    <div style='text-align:center; margin-top:10px; margin-bottom:10px;'>
+        <div style='font-size:40px;'>🛡️</div>
+        <div style='font-size:22px; font-weight:bold;'>SIEVRA</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -115,8 +115,8 @@ with st.sidebar:
         with open("logs.csv", "rb") as f:
             st.download_button("⬇️ Download Logs", f, "logs.csv")
     else:
-        st.info("No logs yet")
-        
+        st.info("No logs yet" if lang=="English" else "Belum ada riwayat")
+
     # =========================
     # CLEAR LOGS
     # =========================    
