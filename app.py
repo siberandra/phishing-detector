@@ -263,16 +263,6 @@ def rule_based(text, sender, file=None):
 # =========================
 # HYBRID
 # =========================
-email_valid = re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", sender)
-
-if not sender:
-    st.warning("Sender email is required" if lang=="English" else "Email pengirim wajib diisi")
-    st.stop()
-
-if not email_valid:
-    st.warning("Invalid email format" if lang=="English" else "Format email tidak valid")
-    st.stop()
-
 def hybrid(text, sender, file=None):
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
     inputs = {k:v.to(device) for k,v in inputs.items()}
@@ -384,6 +374,16 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 if analyze:
 
+    email_valid = re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", sender)
+    
+    if not sender:
+        st.warning("Sender email is required" if lang=="English" else "Email pengirim wajib diisi")
+        st.stop()
+    
+    if not email_valid:
+        st.warning("Invalid email format" if lang=="English" else "Format email tidak valid")
+        st.stop()
+    
     score, reasons = hybrid(text, sender, file)
     score = max(0.0, min(float(score), 1.0))
 
