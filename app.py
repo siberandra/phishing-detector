@@ -1,3 +1,23 @@
+# ============================================================
+# Phishing Email Detection System
+# Copyright (C) 2026 Vicky Chandra
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+#
+# Contact: vickyc.job@gmail.com
+# ============================================================
+
 import streamlit as st
 import torch
 import re
@@ -113,8 +133,8 @@ with st.sidebar:
         df = pd.read_csv("logs.csv")
         st.dataframe(df.tail(10), use_container_width=True)
 
-        with open("logs.csv", "rb") as f:
-            st.download_button("⬇️ Download Logs", f, "logs.csv")
+        # with open("logs.csv", "rb") as f:
+        #     st.download_button("⬇️ Download Logs", f, "logs.csv")
     else:
         st.info("No logs yet" if lang=="English" else "Belum ada riwayat")
 
@@ -129,6 +149,10 @@ with st.sidebar:
             st.rerun()
         else:
             st.info("No logs to delete" if lang=="English" else "Tidak ada riwayat untuk dihapus")
+
+    st.markdown("---")
+    st.markdown("<div class='footer'>SIEVRA v1.0.0-beta</div>", unsafe_allow_html=True)
+
 
 st.markdown("""
 <div style='text-align:center'>
