@@ -25,9 +25,10 @@
 # ============================================================
 
 
-# =========================
-# IMPORT
-# =========================
+# ============================================================
+# SIEVRA - Phishing Email Detection System
+# ============================================================
+
 import streamlit as st
 import torch
 import re
@@ -36,11 +37,16 @@ import os
 import zipfile
 import gdown
 import pandas as pd
-from datetime import datetime
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import uuid
 import email
 from bs4 import BeautifulSoup
+from datetime import datetime
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+
+# =========================
+# PAGE CONFIG
+# =========================
+st.set_page_config(page_title="SIEVRA", page_icon="🛡️", layout="centered")
 
 # =========================
 # SESSION USER ID
@@ -49,85 +55,93 @@ if "user_id" not in st.session_state:
     st.session_state.user_id = str(uuid.uuid4())
 
 # =========================
-# PAGE CONFIG (UNCHANGED)
+# STYLE (TIDAK DIUBAH)
 # =========================
-st.set_page_config(
-    page_title="SIEVRA",
-    page_icon="🛡️",
-    layout="centered"
-)
-
-# =========================
-# STYLE (UNCHANGED)
-# =========================
-st.markdown("""<style>
+st.markdown("""
+<style>
 .status-safe {color:#16a34a;font-weight:bold;}
 .status-warn {color:#f59e0b;font-weight:bold;}
 .status-danger {color:#dc2626;font-weight:bold;}
 .footer {text-align:center;font-size:12px;color:gray;}
-.stButton > button {width:100%;height:48px;border-radius:10px;font-weight:bold;}
+
+.stButton > button {
+    width:100%; height:48px; border-radius:10px; font-weight:bold;
+}
+
 .block-container {padding-top:2rem;}
+
 input, textarea {border-radius:10px !important;}
-</style>""", unsafe_allow_html=True)
+</style>
+""", unsafe_allow_html=True)
 
 # =========================
-# LANGUAGE
+# SIDEBAR
 # =========================
-lang = st.sidebar.selectbox("🌐 Language", ["English", "Indonesia"])
+with st.sidebar:
 
-def t(k):
-    data = {
-        "English": {
-            "history": "📜 History",
-            "clear": "🗑️ Clear My History",
-            "sender_hint": "Paste sender email here",
-            "content_hint": "Paste full email content here",
-            "upload_hint": "Upload file from email (.eml supported)",
-        },
-        "Indonesia": {
-            "history": "📜 Riwayat",
-            "clear": "🗑️ Hapus Riwayat Saya",
-            "sender_hint": "Salin email pengirim ke sini",
-            "content_hint": "Salin semua isi email di sini",
-            "upload_hint": "Upload file dari email (.eml didukung)",
-        }
-    }
-    return data[lang][k]
+    st.markdown("""
+    <div style='text-align:center'>
+        <div style='font-size:38px;'>🛡️</div>
+        <div style='font-size:18px;font-weight:bold;'>SIEVRA</div>
+        <div style='font-size:12px;color:gray;'>Email Risk Analyzer</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# =========================
-# SIDEBAR HISTORY (FIXED USER ONLY)
-# =========================
-st.sidebar.markdown("---")
-st.sidebar.markdown(f"## {t('history')}")
+    st.markdown("---")
 
-if os.path.exists("logs.csv"):
-    df = pd.read_csv("logs.csv")
+    lang = st.selectbox("🌐 Language", ["English", "Indonesia"])
 
-    df_user = df[df["user_id"] == st.session_state.user_id]
+    st.markdown("---")
+    st.markdown("## 📜 History" if lang=="English" else "## 📜 Riwayat")
 
-    if not df_user.empty:
-        st.sidebar.dataframe(df_user.tail(10))
-    else:
-        st.sidebar.info("No history" if lang=="English" else "Belum ada riwayat")
-
-# CLEAR ONLY USER DATA
-if st.sidebar.button(t("clear")):
     if os.path.exists("logs.csv"):
         df = pd.read_csv("logs.csv")
-        df = df[df["user_id"] != st.session_state.user_id]
-        df.to_csv("logs.csv", index=False)
-        st.rerun()
+
+        df["owner"] = df["user_id"].apply(
+            lambda x: "You" if x == st.session_state.user_id else "Other"
+        )
+
+        st.dataframe(df.tail(10), use_container_width=True)
+    else:
+        st.info("No logs yet" if lang=="English" else "Belum ada riwayat")
+
+    # DELETE ONLY OWN
+    if st.button("🗑️ Clear My History" if lang=="English" else "🗑️ Hapus Riwayat Saya"):
+
+        if os.path.exists("logs.csv"):
+            df = pd.read_csv("logs.csv")
+
+            df = df[df["user_id"] != st.session_state.user_id]
+
+            df.to_csv("logs.csv", index=False)
+
+            st.success("Deleted" if lang=="English" else "Berhasil dihapus")
+            st.rerun()
+
+    st.markdown("---")
+    st.markdown("<div class='footer'>SIEVRA v1.0.0-beta</div>", unsafe_allow_html=True)
 
 # =========================
-# MODEL LOAD (UNCHANGED)
+# HEADER (CENTER)
+# =========================
+st.markdown("""
+<div style='text-align:center'>
+    <h1>🛡️ SIEVRA</h1>
+    <p style='color:gray'>Smart Email Verification & Risk Analyzer</p>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("---")
+
+# =========================
+# MODEL LOAD
 # =========================
 MODEL_DIR = "phishing_hybrid_model"
-ZIP_FILE = "phishing_model.zip"
 FILE_ID = "1IJ1PoXkq_6GGT8vFvYVyQCAgnYAbVfsO"
-URL = f"https://drive.google.com/uc?id={FILE_ID}"
+ZIP_FILE = "model.zip"
 
 if not os.path.exists(MODEL_DIR):
-    gdown.download(URL, ZIP_FILE, quiet=False)
+    gdown.download(f"https://drive.google.com/uc?id={FILE_ID}", ZIP_FILE)
     with zipfile.ZipFile(ZIP_FILE, 'r') as zip_ref:
         zip_ref.extractall(".")
 
@@ -143,153 +157,156 @@ def load_model():
 model, tokenizer, device = load_model()
 
 # =========================
-# RULE CONFIG (UPDATED)
+# RULE CONFIG
 # =========================
-LEGIT_TLDS = {'.ac.id','.go.id','.co.id','.gov','.edu'}
-SUSPICIOUS_TLDS = {'.xyz','.top','.online','.click','.link','.shop','.cloud'}
-SHORTENERS = {'bit.ly','tinyurl.com','t.co'}
-FREE_MAIL = {'gmail.com','yahoo.com','outlook.com'}
+LEGIT_TLDS = {'.ac.id','.go.id','.gov','.edu','.mil'}
+SUSPICIOUS_TLDS = {'.xyz','.top','.online','.site','.fun','.click','.biz','.info'}
+SHORTENERS = {'bit.ly','tinyurl','t.co'}
+URGENCY_KW = ['urgent','verify','segera','klik','suspended']
 
 # =========================
-# URL EXTRACT
-# =========================
-def extract_urls(text):
-    return re.findall(r'https?://[^\s]+', text)
-
-# =========================
-# EML PARSER
+# PARSE EML
 # =========================
 def parse_eml(file):
-    raw = file.read()
-    msg = email.message_from_bytes(raw)
-
+    msg = email.message_from_bytes(file.read())
     text = ""
     links = []
 
     for part in msg.walk():
-        content_type = part.get_content_type()
-
-        if content_type == "text/plain":
+        if part.get_content_type() == "text/plain":
             text += part.get_payload(decode=True).decode(errors="ignore")
 
-        if content_type == "text/html":
+        if part.get_content_type() == "text/html":
             html = part.get_payload(decode=True).decode(errors="ignore")
             soup = BeautifulSoup(html, "html.parser")
 
             text += soup.get_text()
 
             for a in soup.find_all("a", href=True):
-                links.append(a["href"])
+                links.append(a['href'])
 
     return text, links
 
 # =========================
-# RULE BASED (UPGRADED)
+# RULE BASED
 # =========================
 def rule_based(text, sender, links):
     score = 0
     reasons = []
 
-    sender_domain = sender.split("@")[-1]
+    domain = sender.split("@")[-1]
 
     # TLD check
-    if any(sender_domain.endswith(t) for t in LEGIT_TLDS):
-        score -= 20
-    if any(sender_domain.endswith(t) for t in SUSPICIOUS_TLDS):
-        score += 30
+    if any(domain.endswith(t) for t in SUSPICIOUS_TLDS):
+        score += 40
         reasons.append("Suspicious TLD")
 
-    # URL checks
-    for url in links:
-        if any(s in url for s in SHORTENERS):
+    # mismatch
+    for l in links:
+        if domain not in l:
             score += 30
-            reasons.append("Shortened URL")
-
-        if sender_domain not in url:
-            score += 25
             reasons.append("Domain mismatch")
+            break
 
-    # FREE MAIL impersonation
-    if sender_domain in FREE_MAIL and any(k in text.lower() for k in ['bank','akun']):
-        score += 30
-        reasons.append("Impersonation")
+    # urgency
+    if any(k in text.lower() for k in URGENCY_KW):
+        score += 20
+        reasons.append("Urgency language")
+
+    # many links
+    if len(links) > 2:
+        score += 20
+        reasons.append("Many links")
 
     return score, reasons
 
 # =========================
-# HYBRID (FIXED)
+# HYBRID
 # =========================
 def hybrid(text, sender, links):
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True).to(device)
 
     with torch.no_grad():
-        logits = model(**inputs).logits
-        probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
+        probs = torch.softmax(model(**inputs).logits, dim=1)[0]
 
-    ai_score = float(probs[1])
-    rule_score, reasons = rule_based(text, sender, links)
+    ai = float(probs[1])
+    rule, reasons = rule_based(text, sender, links)
 
-    final = (ai_score * 0.8) + ((rule_score / 100) * 0.2)
-
+    final = (0.7 * ai) + (0.3 * (rule/100))
     return final, reasons
 
 # =========================
-# UI (UNCHANGED + HINT)
+# INPUT (DENGAN HINT)
 # =========================
-st.title("🛡️ SIEVRA")
 
-with st.expander("💡 Hint - Sender"):
-    st.write(t("sender_hint"))
+col1, col2 = st.columns([10,1])
+with col1:
+    sender = st.text_input("📧 Sender Email")
+with col2:
+    st.markdown("<span title='Paste sender email here' style='color:gray;'>❔</span>", unsafe_allow_html=True)
 
-sender = st.text_input("📧 Email Pengirim")
+col1, col2 = st.columns([10,1])
+with col1:
+    text = st.text_area("📝 Email Content", height=180)
+with col2:
+    st.markdown("<span title='Paste full email content here' style='color:gray;'>❔</span>", unsafe_allow_html=True)
 
-with st.expander("💡 Hint - Content"):
-    st.write(t("content_hint"))
+col1, col2 = st.columns([10,1])
+with col1:
+    file = st.file_uploader("📎 Upload File (.eml supported)")
+with col2:
+    st.markdown("<span title='Upload .eml file to extract hidden links' style='color:gray;'>❔</span>", unsafe_allow_html=True)
 
-text = st.text_area("📝 Isi Email")
-
-with st.expander("💡 Hint - Upload"):
-    st.write(t("upload_hint"))
-
-file = st.file_uploader("📎 Upload File")
+analyze = st.button("🚀 Analyze Email", use_container_width=True)
 
 # =========================
-# ANALYZE
+# PROCESS
 # =========================
-if st.button("🚀 Analyze"):
+if analyze:
 
-    links = extract_urls(text)
+    links = []
 
-    # HANDLE EML
     if file and file.name.endswith(".eml"):
-        eml_text, eml_links = parse_eml(file)
-        text += eml_text
-        links += eml_links
+        parsed_text, links = parse_eml(file)
+        text += " " + parsed_text
+
+    links += re.findall(r'http\S+', text)
 
     score, reasons = hybrid(text, sender, links)
 
-    status = "AMAN" if score < 0.3 else "MENCURIGAKAN" if score < 0.6 else "PHISHING"
+    if score < 0.3:
+        status = "SAFE"
+        css = "status-safe"
+    elif score < 0.6:
+        status = "SUSPICIOUS"
+        css = "status-warn"
+    else:
+        status = "PHISHING"
+        css = "status-danger"
 
-    st.write("Score:", round(score,3))
-    st.write("Status:", status)
+    st.markdown("## 🔍 Result")
+    st.markdown(f"<p class='{css}'>{status}</p>", unsafe_allow_html=True)
+    st.write(f"Score: {score*100:.2f}%")
 
     for r in reasons:
-        st.write("-", r)
+        st.write(f"- {r}")
 
-    # SAVE LOG (USER ONLY)
+    # LOG
     new = pd.DataFrame([{
         "user_id": st.session_state.user_id,
         "time": datetime.now(),
         "sender": sender,
-        "score": score,
+        "body": text,
+        "risk_score": round(score,4),
         "status": status
     }])
 
     if os.path.exists("logs.csv"):
         old = pd.read_csv("logs.csv")
-        new = pd.concat([old, new])
+        new = pd.concat([old,new])
 
     new.to_csv("logs.csv", index=False)
+
 
 # =========================
 # FOOTER (UNCHANGED)
