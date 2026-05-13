@@ -7,3 +7,5 @@ numpy>=1.24
 python-Levenshtein>=0.20
 gdown
 reportlab
+tldextract
+beautifulsoup4
