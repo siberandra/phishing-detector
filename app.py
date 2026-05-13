@@ -305,7 +305,7 @@ st.markdown("---")
 MODEL_DIR = "phishing_hybrid_model"
 ZIP_FILE = "phishing_model.zip"
 
-FILE_ID = "1DcNpMhCbdIuoyg6VjQCrTpLGiuI4yI2w"
+FILE_ID = "1IJ1PoXkq_6GGT8vFvYVyQCAgnYAbVfsO"
 
 GDRIVE_URL = f"https://drive.google.com/uc?id={FILE_ID}"
 
