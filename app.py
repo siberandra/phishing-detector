@@ -18,111 +18,251 @@
 # Contact: vickyc.job@gmail.com
 # ============================================================
 
-
-
-# ============================================================
-# SIEVRA - FINAL STREAMLIT (IMPROVED)
-# ============================================================
-
-
-# ============================================================
-# SIEVRA - Phishing Email Detection System
-# ============================================================
-
 import streamlit as st
 import torch
 import re
 import numpy as np
 import os
 import zipfile
-import gdown
-import pandas as pd
-import uuid
 import email
-from bs4 import BeautifulSoup
+import email.policy
+import gdown
+import tldextract
+import pandas as pd
 from datetime import datetime
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from bs4 import BeautifulSoup
 
 # =========================
 # PAGE CONFIG
 # =========================
-st.set_page_config(page_title="SIEVRA", page_icon="🛡️", layout="centered")
+st.set_page_config(
+    page_title="SIEVRA",
+    page_icon="🛡️",
+    layout="centered"
+)
 
 # =========================
-# SESSION USER ID
-# =========================
-if "user_id" not in st.session_state:
-    st.session_state.user_id = str(uuid.uuid4())
-
-# =========================
-# STYLE (TIDAK DIUBAH)
+# CUSTOM STYLE
 # =========================
 st.markdown("""
 <style>
-.status-safe {color:#16a34a;font-weight:bold;}
-.status-warn {color:#f59e0b;font-weight:bold;}
-.status-danger {color:#dc2626;font-weight:bold;}
-.footer {text-align:center;font-size:12px;color:gray;}
-
-.stButton > button {
-    width:100%; height:48px; border-radius:10px; font-weight:bold;
+.status-safe {
+    color: #16a34a;
+    font-weight: bold;
 }
-
-.block-container {padding-top:2rem;}
-
-input, textarea {border-radius:10px !important;}
+.status-warn {
+    color: #f59e0b;
+    font-weight: bold;
+}
+.status-danger {
+    color: #dc2626;
+    font-weight: bold;
+}
+.footer {
+    text-align: center;
+    font-size: 12px;
+    color: gray;
+}
+.stButton > button {
+    width: 100%;
+    height: 48px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+.block-container {
+    padding-top: 2rem;
+}
+.main-card:hover {
+    box-shadow: 0px 8px 20px rgba(0,0,0,0.1);
+    transition: 0.3s;
+}
+input, textarea {
+    border-radius: 10px !important;
+}
+div[data-testid="stProgressBar"] > div > div {
+    border-radius: 10px;
+}
+section.main > div {
+    padding-bottom: 10px;
+}
+/* Hint icon button styling */
+.hint-popup {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #0369a1;
+    margin-top: -8px;
+    margin-bottom: 8px;
+}
 </style>
 """, unsafe_allow_html=True)
+
+# =========================
+# SESSION STATE INIT
+# =========================
+if "show_hint_sender" not in st.session_state:
+    st.session_state.show_hint_sender = False
+if "show_hint_content" not in st.session_state:
+    st.session_state.show_hint_content = False
+if "show_hint_upload" not in st.session_state:
+    st.session_state.show_hint_upload = False
+if "current_user" not in st.session_state:
+    # Simulate user identity via session (simple unique ID per session)
+    import uuid
+    st.session_state.current_user = str(uuid.uuid4())[:8]
+
+# =========================
+# TRANSLATIONS
+# =========================
+TRANSLATIONS = {
+    "English": {
+        "sender":           "📧 Sender Email",
+        "content":          "📝 Email Content",
+        "upload":           "📎 Upload File (optional)",
+        "analyze":          "🚀 Analyze Email",
+        "result":           "## 🔍 Analysis Result",
+        "reasons":          "### 📌 Detection Reasons",
+        "score":            "⚠️ Phishing Risk Score",
+        "safe":             "SAFE",
+        "suspicious":       "SUSPICIOUS",
+        "phishing":         "PHISHING",
+        "no_reason":        "No strong suspicious indicators detected",
+        "history":          "📜 History",
+        "language":         "🌐 Language",
+        "clear_history":    "🗑️ Clear My History",
+        "no_logs":          "No logs yet",
+        "no_logs_delete":   "No logs to delete",
+        "logs_cleared":     "Your history cleared successfully",
+        "eml_section":      "### 🔬 EML Structure Analysis",
+        "hint_sender":      "ℹ️ Copy and paste the sender's email address here exactly as it appears in the email header (e.g. no-reply@company.com).",
+        "hint_content":     "ℹ️ Copy and paste the full body text of the email here. Include all paragraphs, links, and any visible text.",
+        "hint_upload":      "ℹ️ Upload any file you received from the email. Do NOT open or run it — just upload it here for safety analysis.\n\nYou can also upload the entire email as an .eml file: in most email clients, use 'Save As' or 'Download' → '.eml' to export the email, then upload it here. This enables deeper link and structure analysis.",
+        "sender_required":  "Sender email is required",
+        "sender_invalid":   "Please enter a valid email format (e.g. example@domain.com)",
+        "low_risk":         "Low risk detected",
+        "some_suspicious":  "Some suspicious indicators detected",
+        "high_risk":        "High risk phishing indicators detected",
+        "no_suspicious":    "No suspicious patterns detected",
+        "no_malicious":     "No malicious links or attachments found",
+        "sender_normal":    "Sender appears normal",
+        "ai_score":         "🤖 AI Score",
+        "rule_score":       "📋 Rule Score",
+    },
+    "Indonesia": {
+        "sender":           "📧 Email Pengirim",
+        "content":          "📝 Isi Email",
+        "upload":           "📎 Upload File (opsional)",
+        "analyze":          "🚀 Analisis Email",
+        "result":           "## 🔍 Hasil Analisis",
+        "reasons":          "### 📌 Alasan Deteksi",
+        "score":            "⚠️ Skor Risiko Phishing",
+        "safe":             "AMAN",
+        "suspicious":       "MENCURIGAKAN",
+        "phishing":         "PHISHING",
+        "no_reason":        "Tidak ditemukan indikasi mencurigakan",
+        "history":          "📜 Riwayat",
+        "language":         "🌐 Bahasa",
+        "clear_history":    "🗑️ Hapus Riwayat Saya",
+        "no_logs":          "Belum ada riwayat",
+        "no_logs_delete":   "Tidak ada riwayat untuk dihapus",
+        "logs_cleared":     "Riwayat Anda berhasil dihapus",
+        "eml_section":      "### 🔬 Analisis Struktur EML",
+        "hint_sender":      "ℹ️ Salin dan tempel alamat email pengirim di sini persis seperti yang tertera di header email (contoh: no-reply@perusahaan.com).",
+        "hint_content":     "ℹ️ Salin semua isi email ke sini. Termasuk semua paragraf, link, dan teks yang tampak di badan email.",
+        "hint_upload":      "ℹ️ Silakan upload file yang Anda terima dari email. Cukup upload saja — JANGAN dibuka atau dijalankan.\n\nAnda juga bisa upload isi email secara keseluruhan dengan mengunduh email menjadi file .eml: di sebagian besar aplikasi email, pilih 'Simpan Sebagai' atau 'Unduh' → '.eml', lalu upload di sini. Ini memungkinkan analisis link tersembunyi yang lebih mendalam.",
+        "sender_required":  "Email pengirim wajib diisi",
+        "sender_invalid":   "Format email tidak valid (contoh: nama@email.com)",
+        "low_risk":         "Risiko rendah terdeteksi",
+        "some_suspicious":  "Beberapa indikasi mencurigakan ditemukan",
+        "high_risk":        "Indikasi phishing berisiko tinggi terdeteksi",
+        "no_suspicious":    "Tidak ditemukan pola mencurigakan",
+        "no_malicious":     "Tidak ada link atau file berbahaya",
+        "sender_normal":    "Pengirim terlihat normal",
+        "ai_score":         "🤖 Skor AI",
+        "rule_score":       "📋 Skor Rule",
+    }
+}
+
+def t(key, lang):
+    return TRANSLATIONS[lang].get(key, key)
 
 # =========================
 # SIDEBAR
 # =========================
 with st.sidebar:
-
     st.markdown("""
-    <div style='text-align:center'>
-        <div style='font-size:38px;'>🛡️</div>
-        <div style='font-size:18px;font-weight:bold;'>SIEVRA</div>
-        <div style='font-size:12px;color:gray;'>Email Risk Analyzer</div>
+    <div style='text-align:center; margin-top:10px; margin-bottom:10px;'>
+        <div style='font-size:40px; font-weight:bold'>🛡️ SIEVRA</div>
+        <div style='font-size:13px; color:gray;'>Smart Email Verification & Risk Analyzer</div>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("---")
-
-    lang = st.selectbox("🌐 Language", ["English", "Indonesia"])
+    lang = st.selectbox(
+        t("language", "English"),   # label always shown as Language icon + word
+        ["English", "Indonesia"],
+        key="lang_select"
+    )
+    # Re-render label in chosen language after selection
+    # (Streamlit re-renders automatically on next run)
 
     st.markdown("---")
-    st.markdown("## 📜 History" if lang=="English" else "## 📜 Riwayat")
+    st.markdown(f"## {t('history', lang)}")
 
-    if os.path.exists("logs.csv"):
-        df = pd.read_csv("logs.csv")
+    LOG_FILE = "logs.csv"
+    current_user = st.session_state.current_user
 
-        df["owner"] = df["user_id"].apply(
-            lambda x: "You" if x == st.session_state.user_id else "Other"
-        )
+    if os.path.exists(LOG_FILE):
+        df_all = pd.read_csv(LOG_FILE)
 
-        st.dataframe(df.tail(10), use_container_width=True)
+        # Show only current user's logs
+        if "user_id" in df_all.columns:
+            df_user = df_all[df_all["user_id"] == current_user]
+        else:
+            df_user = df_all  # backward compat if old logs exist
+
+        if not df_user.empty:
+            display_cols = ["time", "sender", "risk_score", "status"]
+            existing_cols = [c for c in display_cols if c in df_user.columns]
+            st.dataframe(df_user[existing_cols].tail(10), use_container_width=True)
+        else:
+            st.info(t("no_logs", lang))
     else:
-        st.info("No logs yet" if lang=="English" else "Belum ada riwayat")
+        st.info(t("no_logs", lang))
 
-    # DELETE ONLY OWN
-    if st.button("🗑️ Clear My History" if lang=="English" else "🗑️ Hapus Riwayat Saya"):
-
-        if os.path.exists("logs.csv"):
-            df = pd.read_csv("logs.csv")
-
-            df = df[df["user_id"] != st.session_state.user_id]
-
-            df.to_csv("logs.csv", index=False)
-
-            st.success("Deleted" if lang=="English" else "Berhasil dihapus")
-            st.rerun()
+    # =========================
+    # CLEAR ONLY OWN LOGS
+    # =========================
+    if st.button(t("clear_history", lang)):
+        if os.path.exists(LOG_FILE):
+            df_all = pd.read_csv(LOG_FILE)
+            if "user_id" in df_all.columns:
+                df_kept = df_all[df_all["user_id"] != current_user]
+                if len(df_kept) == len(df_all):
+                    st.info(t("no_logs_delete", lang))
+                else:
+                    if df_kept.empty:
+                        os.remove(LOG_FILE)
+                    else:
+                        df_kept.to_csv(LOG_FILE, index=False)
+                    st.success(t("logs_cleared", lang))
+                    st.rerun()
+            else:
+                # Old format: clear all (backward compat)
+                os.remove(LOG_FILE)
+                st.success(t("logs_cleared", lang))
+                st.rerun()
+        else:
+            st.info(t("no_logs_delete", lang))
 
     st.markdown("---")
-    st.markdown("<div class='footer'>SIEVRA v1.0.0-beta</div>", unsafe_allow_html=True)
+    st.markdown("<div class='footer'>SIEVRA v1.1.0-beta</div>", unsafe_allow_html=True)
 
 # =========================
-# HEADER (CENTER)
+# MAIN HEADER
 # =========================
 st.markdown("""
 <div style='text-align:center'>
@@ -134,22 +274,29 @@ st.markdown("""
 st.markdown("---")
 
 # =========================
-# MODEL LOAD
+# MODEL CONFIG
 # =========================
-MODEL_DIR = "phishing_hybrid_model"
-FILE_ID = "1IJ1PoXkq_6GGT8vFvYVyQCAgnYAbVfsO"
-ZIP_FILE = "model.zip"
+MODEL_DIR   = "phishing_hybrid_model"
+ZIP_FILE    = "phishing_model.zip"
+FILE_ID     = "1IJ1PoXkq_6GGT8vFvYVyQCAgnYAbVfsO"
+GDRIVE_URL  = f"https://drive.google.com/uc?id={FILE_ID}"
 
 if not os.path.exists(MODEL_DIR):
-    gdown.download(f"https://drive.google.com/uc?id={FILE_ID}", ZIP_FILE)
+    st.info("🔄 Downloading model...")
+    if not os.path.exists(ZIP_FILE):
+        gdown.download(GDRIVE_URL, ZIP_FILE, quiet=False)
     with zipfile.ZipFile(ZIP_FILE, 'r') as zip_ref:
         zip_ref.extractall(".")
 
+# =========================
+# LOAD MODEL
+# =========================
 @st.cache_resource
 def load_model():
-    model = AutoModelForSequenceClassification.from_pretrained(f"{MODEL_DIR}/indobert")
-    tokenizer = AutoTokenizer.from_pretrained(f"{MODEL_DIR}/indobert")
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    path      = f"{MODEL_DIR}/indobert"
+    model     = AutoModelForSequenceClassification.from_pretrained(path)
+    tokenizer = AutoTokenizer.from_pretrained(path)
+    device    = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
     model.eval()
     return model, tokenizer, device
@@ -157,159 +304,677 @@ def load_model():
 model, tokenizer, device = load_model()
 
 # =========================
-# RULE CONFIG
+# RULE-BASED CONFIG  (aligned with notebook v5)
 # =========================
-LEGIT_TLDS = {'.ac.id','.go.id','.gov','.edu','.mil'}
-SUSPICIOUS_TLDS = {'.xyz','.top','.online','.site','.fun','.click','.biz','.info'}
-SHORTENERS = {'bit.ly','tinyurl','t.co'}
-URGENCY_KW = ['urgent','verify','segera','klik','suspended']
+LEGIT_TLDS = {
+    'ac.id','go.id','sch.id','ponpes.id','mil.id','or.id','co.id',
+    'ac.uk','gov.uk','nhs.uk','gov','mil','edu','ac.au','gov.au',
+}
+
+SUSPICIOUS_TLDS = {
+    'xin','bond','cfd','today','lol','top','best','buzz','shop',
+    'online','xyz','icu','sbs','cyou','info','biz','click','link',
+    'live','cloud','my.id','biz.id','zip','mov','tk','pw','ml','ga',
+    'cf','gq','ru','cn','me','site','store','fun','rehab','skin',
+    'associates','club','cc','to','ws','gq',
+}
+
+SHORTENERS = {
+    'bit.ly','tinyurl.com','t.co','goo.gl','ow.ly',
+    'is.gd','rb.gy','shorturl.at','cutt.ly','rebrand.ly',
+}
+
+DANGEROUS_EXTENSIONS = {
+    '.exe','.bat','.cmd','.com','.scr','.pif',
+    '.vbs','.vbe','.js','.jse','.wsf','.wsh',
+    '.apk','.ipa',
+    '.msi','.dll','.sys',
+    '.ps1','.psm1',
+    '.jar','.class',
+    '.hta',
+}
+
+URGENCY_KW = [
+    'urgent','immediately','suspended','verify now','action required',
+    'account disabled','click here','limited time','expires',
+    'segera','gratis','hadiah','promo','menang','klik sekarang',
+    'verifikasi','dibekukan','terpilih','klaim','berakhir','darurat',
+]
+
+FREE_MAIL = {'gmail.com','yahoo.com','hotmail.com','ymail.com','outlook.com'}
+INST_KW   = ['bank','paypal','shopee','tokopedia','bca','bri',
+              'mandiri','pemerintah','kpu','bawaslu','ojk','bpjs']
 
 # =========================
-# PARSE EML
+# EML PARSER
 # =========================
-def parse_eml(file):
-    msg = email.message_from_bytes(file.read())
-    text = ""
-    links = []
-
+def parse_eml(file_bytes):
+    """
+    Parse raw .eml bytes → dict with:
+      - subject, from_, to_, body_plain, body_html, attachments, raw_html
+    """
+    msg = email.message_from_bytes(file_bytes, policy=email.policy.default)
+    result = {
+        "subject":     msg.get("Subject", ""),
+        "from_":       msg.get("From", ""),
+        "to_":         msg.get("To", ""),
+        "body_plain":  "",
+        "body_html":   "",
+        "attachments": [],
+        "raw_html":    "",
+    }
     for part in msg.walk():
-        if part.get_content_type() == "text/plain":
-            text += part.get_payload(decode=True).decode(errors="ignore")
+        ct = part.get_content_type()
+        cd = str(part.get("Content-Disposition", ""))
+        fn = part.get_filename()
+        if fn:
+            result["attachments"].append(fn)
+            continue
+        if ct == "text/plain" and not result["body_plain"]:
+            try:
+                result["body_plain"] = part.get_content()
+            except Exception:
+                result["body_plain"] = part.get_payload(decode=True).decode("utf-8", errors="replace")
+        elif ct == "text/html" and not result["body_html"]:
+            try:
+                raw = part.get_content()
+            except Exception:
+                raw = part.get_payload(decode=True).decode("utf-8", errors="replace")
+            result["body_html"] = raw
+            result["raw_html"]  = raw
+    # Fallback: extract text from HTML if plain is empty
+    if not result["body_plain"] and result["body_html"]:
+        soup = BeautifulSoup(result["body_html"], "html.parser")
+        result["body_plain"] = soup.get_text(separator=" ")
+    return result
 
-        if part.get_content_type() == "text/html":
-            html = part.get_payload(decode=True).decode(errors="ignore")
-            soup = BeautifulSoup(html, "html.parser")
 
-            text += soup.get_text()
+def check_eml_structure(raw_html):
+    """
+    Bedah HTML email untuk deteksi:
+    1. Hidden link  : anchor text domain ≠ href domain
+    2. Gambar berbahaya: img src dengan ekstensi berbahaya
+    3. URL over-encoding: terlalu banyak %xx
+    Returns: (score 0-100, list[findings])
+    """
+    score    = 0
+    findings = []
+    if not raw_html:
+        return score, findings
 
-            for a in soup.find_all("a", href=True):
-                links.append(a['href'])
+    soup = BeautifulSoup(raw_html, "html.parser")
 
-    return text, links
+    # --- Hidden links ---
+    for tag in soup.find_all("a", href=True):
+        href        = tag["href"]
+        anchor_text = tag.get_text()
+        try:
+            href_domain = tldextract.extract(href).registered_domain
+        except Exception:
+            href_domain = ""
+        text_domains = re.findall(r'[\w-]+\.[a-z]{2,}', anchor_text.lower())
+        for td in text_domains:
+            try:
+                td_reg = tldextract.extract(td).registered_domain
+            except Exception:
+                td_reg = ""
+            if td_reg and href_domain and td_reg != href_domain:
+                score += 40
+                findings.append(
+                    f"Hidden link: teks '{anchor_text.strip()[:40]}' → href '{href[:60]}'"
+                )
+                break
 
-# =========================
-# RULE BASED
-# =========================
-def rule_based(text, sender, links):
-    score = 0
-    reasons = []
+    # --- Dangerous img src ---
+    for tag in soup.find_all("img", src=True):
+        src = tag["src"]
+        lower = src.lower().split("?")[0].split("#")[0]
+        for ext in DANGEROUS_EXTENSIONS:
+            if lower.endswith(ext):
+                score += 30
+                findings.append(f"Gambar dengan ekstensi berbahaya: {ext} ({src[:60]})")
+                break
 
-    domain = sender.split("@")[-1]
-
-    # TLD check
-    if any(domain.endswith(t) for t in SUSPICIOUS_TLDS):
-        score += 40
-        reasons.append("Suspicious TLD")
-
-    # mismatch
-    for l in links:
-        if domain not in l:
-            score += 30
-            reasons.append("Domain mismatch")
+    # --- Over-encoded URLs ---
+    for url in re.findall(r'https?://[^\s<>"]+', raw_html):
+        if url.count("%") > 3:
+            score += 20
+            findings.append(f"URL over-encoded ({url.count('%')}x %%): {url[:60]}")
             break
 
-    # urgency
-    if any(k in text.lower() for k in URGENCY_KW):
-        score += 20
-        reasons.append("Urgency language")
+    return min(score, 100), findings
 
-    # many links
-    if len(links) > 2:
+
+# =========================
+# DOMAIN / TLD HELPERS
+# =========================
+def check_dangerous_ext_url(url_or_path):
+    lower = url_or_path.lower().split("?")[0].split("#")[0]
+    for ext in DANGEROUS_EXTENSIONS:
+        if lower.endswith(ext):
+            return True, ext
+    return False, None
+
+
+def check_domain_tld(domain):
+    """Analisis domain: TLD, typosquatting, IP, depth. Returns (risk 0-100, reasons)."""
+    risk    = 0
+    reasons = []
+    try:
+        parsed = tldextract.extract(domain)
+        suffix = parsed.suffix.lower()
+        reg    = parsed.registered_domain.lower()
+        full   = domain.lower()
+    except Exception:
+        return 0, []
+
+    if suffix in SUSPICIOUS_TLDS:
+        risk += 40
+        reasons.append(f"TLD mencurigakan: .{suffix}")
+
+    for legit in LEGIT_TLDS:
+        if re.search(r'\.' + re.escape(legit) + r'\.', full):
+            risk += 50
+            reasons.append(f"TLD resmi '{legit}' disisipkan di tengah (typosquatting)")
+            break
+
+    if len(full.split(".")) > 4:
+        risk += 20
+        reasons.append(f"Domain {len(full.split('.'))} level (terlalu dalam)")
+
+    if re.search(r'\d{4,}', reg):
+        risk += 15
+        reasons.append("Domain mengandung banyak digit")
+
+    if "-" in reg and len(reg) > 20:
+        risk += 15
+        reasons.append("Domain panjang berisi tanda hubung")
+
+    if re.match(r'^\d+\.\d+\.\d+\.\d+$', domain):
+        risk += 60
+        reasons.append("Domain berupa IP address")
+
+    return min(risk, 100), reasons
+
+
+def extract_urls(text):
+    return re.findall(r'https?://\S+|www\.\S+', text)
+
+# =========================
+# RULE-BASED SCORE  (aligned with notebook v5)
+# =========================
+def rule_based_score(text, sender_email, raw_html=None):
+    """
+    Hitung skor rule-based [0.0–1.0].
+    Returns: (score, list[reasons])
+    """
+    score   = 0
+    reasons = []
+    t_lower = text.lower()
+
+    # --- SENDER DOMAIN ---
+    sender_domain = sender_email.split("@")[-1].strip().lower() \
+                    if "@" in sender_email else sender_email.lower()
+    try:
+        s_suffix = tldextract.extract(sender_domain).suffix.lower()
+    except Exception:
+        s_suffix = ""
+
+    if s_suffix in LEGIT_TLDS:
+        score -= 20
+        reasons.append(f"Domain pengirim resmi: .{s_suffix}")
+
+    if sender_domain in FREE_MAIL and any(kw in t_lower for kw in INST_KW):
+        score += 45
+        reasons.append("Klaim dari institusi tapi pakai email gratis")
+
+    s_tld_score, s_tld_reasons = check_domain_tld(sender_domain)
+    score   += s_tld_score * 0.5
+    reasons += [f"[Sender] {r}" for r in s_tld_reasons]
+
+    # --- URL DI BODY ---
+    urls = extract_urls(text)
+
+    if re.search(r'https?://\d+\.\d+\.\d+\.\d+', t_lower):
+        score += 50
+        reasons.append("URL menggunakan IP address")
+
+    for url in urls:
+        if any(s in url.lower() for s in SHORTENERS):
+            score += 25
+            reasons.append("URL shortener terdeteksi")
+            break
+
+    for url in urls:
+        ok, ext = check_dangerous_ext_url(url)
+        if ok:
+            score += 55
+            reasons.append(f"URL ekstensi berbahaya: {ext}")
+            break
+
+    for url in urls:
+        ud = re.sub(r'https?://', '', url).split('/')[0].replace('www.', '')
+        tld_s, tld_r = check_domain_tld(ud)
+        if tld_s > 0:
+            score   += tld_s
+            reasons += [f"[URL] {r}" for r in tld_r]
+            break
+
+    # Sender–URL domain mismatch
+    if urls and sender_domain:
+        try:
+            s_reg = tldextract.extract(sender_domain).registered_domain
+        except Exception:
+            s_reg = ""
+        for url in urls:
+            ud = re.sub(r'https?://', '', url).split('/')[0].replace('www.', '')
+            try:
+                u_reg = tldextract.extract(ud).registered_domain
+            except Exception:
+                u_reg = ""
+            if s_reg and u_reg and s_reg != u_reg:
+                score += 30
+                reasons.append(f"Mismatch: sender={s_reg} ≠ url={u_reg}")
+                break
+
+    if len(urls) > 3:
         score += 20
-        reasons.append("Many links")
+        reasons.append(f"Terlalu banyak link ({len(urls)})")
+
+    # Dangerous extension mention in body
+    for ext in DANGEROUS_EXTENSIONS:
+        if ext in t_lower:
+            score += 35
+            reasons.append(f"Mention ekstensi berbahaya: {ext}")
+            break
+
+    # EML HTML structure check
+    if raw_html:
+        eml_s, eml_f = check_eml_structure(raw_html)
+        score   += eml_s
+        reasons += eml_f
+
+    # Urgency keywords
+    uc = sum(1 for kw in URGENCY_KW if kw in t_lower)
+    if uc >= 2:
+        score += 20
+        reasons.append(f"Banyak kata urgensi ({uc})")
+    elif uc == 1:
+        score += 10
+        reasons.append("Kata urgensi terdeteksi")
+
+    if re.search(r'[a-z]+[0-9]+[a-z]+', t_lower):
+        score += 10
+        reasons.append("Pola leet/typo mencurigakan")
+
+    score = max(0.0, min(float(score), 100.0)) / 100.0
+    return score, reasons
+
+
+# =========================
+# FILE ATTACHMENT CHECK
+# =========================
+def check_uploaded_file(filename):
+    """Check an uploaded file's name for dangerous extensions."""
+    fn     = filename.lower()
+    score  = 0
+    reasons = []
+
+    is_double = bool(re.search(r'\.(pdf|docx|jpg|png)\.(exe|bat|js|scr|vbs)', fn))
+    is_multi  = len(fn.split(".")) > 2
+
+    if any(fn.endswith(ext) for ext in DANGEROUS_EXTENSIONS):
+        score += 55
+        reasons.append(f"Ekstensi file berbahaya: {fn.split('.')[-1]}")
+
+    if is_double:
+        score += 50
+        reasons.append("Ekstensi ganda (penyamaran file)")
+    elif is_multi and not fn.endswith(".eml"):
+        score += 20
+        reasons.append("File dengan banyak ekstensi mencurigakan")
 
     return score, reasons
 
-# =========================
-# HYBRID
-# =========================
-def hybrid(text, sender, links):
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True).to(device)
 
+# =========================
+# HYBRID INFERENCE
+# (AI=0.70, Rule=0.30 — dinaikkan sesuai catatan notebook: Streamlit rule lebih kaya)
+# =========================
+AI_WEIGHT   = 0.70
+RULE_WEIGHT = 0.30
+
+def hybrid_predict(text, sender, raw_html=None, uploaded_file=None):
+    """
+    Returns: (final_score, ai_score, rule_score, reasons)
+    """
+    # AI score via XLM-R / IndoBERT
+    inputs = tokenizer(
+        text, return_tensors="pt",
+        truncation=True, padding=True, max_length=512
+    )
+    inputs = {k: v.to(device) for k, v in inputs.items()}
     with torch.no_grad():
-        probs = torch.softmax(model(**inputs).logits, dim=1)[0]
+        out   = model(**inputs)
+        probs = torch.softmax(out.logits, dim=1).cpu().numpy()[0]
+    ai_score = float(probs[1])
 
-    ai = float(probs[1])
-    rule, reasons = rule_based(text, sender, links)
+    # Rule-based score
+    rule_score, reasons = rule_based_score(text, sender, raw_html=raw_html)
 
-    final = (0.7 * ai) + (0.3 * (rule/100))
-    return final, reasons
+    # Uploaded file check (non-EML)
+    if uploaded_file and not uploaded_file.name.lower().endswith(".eml"):
+        fscore, freasons = check_uploaded_file(uploaded_file.name)
+        rule_score = min(1.0, rule_score + fscore / 100.0)
+        reasons   += freasons
+        if fscore > 0 and not text.strip():
+            rule_score = min(1.0, rule_score + 0.40)
+            reasons.append("Pesan hanya berisi file berbahaya (file-only attack)")
 
-# =========================
-# INPUT (DENGAN HINT)
-# =========================
+    final = AI_WEIGHT * ai_score + RULE_WEIGHT * rule_score
+    return float(final), float(ai_score), float(rule_score), reasons
 
-col1, col2 = st.columns([10,1])
-with col1:
-    sender = st.text_input("📧 Sender Email")
-with col2:
-    st.markdown("<span title='Paste sender email here' style='color:gray;'>❔</span>", unsafe_allow_html=True)
-
-col1, col2 = st.columns([10,1])
-with col1:
-    text = st.text_area("📝 Email Content", height=180)
-with col2:
-    st.markdown("<span title='Paste full email content here' style='color:gray;'>❔</span>", unsafe_allow_html=True)
-
-col1, col2 = st.columns([10,1])
-with col1:
-    file = st.file_uploader("📎 Upload File (.eml supported)")
-with col2:
-    st.markdown("<span title='Upload .eml file to extract hidden links' style='color:gray;'>❔</span>", unsafe_allow_html=True)
-
-analyze = st.button("🚀 Analyze Email", use_container_width=True)
 
 # =========================
-# PROCESS
+# REASON TRANSLATION
 # =========================
-if analyze:
+REASON_MAP_ID = {
+    "Domain pengirim resmi":                "Domain pengirim resmi",
+    "Klaim dari institusi tapi pakai email gratis": "Klaim dari institusi tapi pakai email gratis",
+    "URL menggunakan IP address":           "URL menggunakan IP address",
+    "URL shortener terdeteksi":             "URL shortener terdeteksi",
+    "Terlalu banyak link":                  "Terlalu banyak link",
+    "Mismatch":                             "Ketidaksesuaian domain pengirim & URL",
+    "Banyak kata urgensi":                  "Banyak kata urgensi",
+    "Kata urgensi terdeteksi":              "Kata urgensi terdeteksi",
+    "Pola leet/typo mencurigakan":          "Pola leet/typo mencurigakan",
+    "TLD mencurigakan":                     "TLD mencurigakan",
+    "typosquatting":                        "Typosquatting TLD",
+    "Domain berupa IP address":             "Domain berupa IP address",
+    "Domain panjang berisi tanda hubung":   "Domain panjang berisi tanda hubung",
+    "Domain mengandung banyak digit":       "Domain mengandung banyak digit",
+    "terlalu dalam":                        "Domain terlalu banyak level",
+    "Hidden link":                          "Link tersembunyi",
+    "Gambar dengan ekstensi berbahaya":     "Gambar dengan ekstensi berbahaya",
+    "URL over-encoded":                     "URL di-encoding berlebihan (obfuscation)",
+    "Ekstensi file berbahaya":              "Ekstensi file berbahaya",
+    "Ekstensi ganda":                       "Ekstensi ganda (penyamaran file)",
+    "Mention ekstensi berbahaya":           "Penyebutan ekstensi file berbahaya",
+    "Pesan hanya berisi file berbahaya":    "Pesan hanya berisi file berbahaya",
+    "URL ekstensi berbahaya":               "URL mengarah ke file berbahaya",
+}
 
-    links = []
+REASON_MAP_EN = {
+    "Domain pengirim resmi":                "Trusted sender domain",
+    "Klaim dari institusi tapi pakai email gratis": "Institution impersonation via free email",
+    "URL menggunakan IP address":           "URL uses raw IP address",
+    "URL shortener terdeteksi":             "URL shortener detected",
+    "Terlalu banyak link":                  "Too many links in body",
+    "Mismatch":                             "Sender domain ≠ URL domain",
+    "Banyak kata urgensi":                  "Multiple urgency keywords",
+    "Kata urgensi terdeteksi":              "Urgency keyword detected",
+    "Pola leet/typo mencurigakan":          "Suspicious leet/typo pattern",
+    "TLD mencurigakan":                     "Suspicious TLD",
+    "typosquatting":                        "TLD typosquatting detected",
+    "Domain berupa IP address":             "Domain is an IP address",
+    "Domain panjang berisi tanda hubung":   "Long domain with hyphens",
+    "Domain mengandung banyak digit":       "Domain contains many digits",
+    "terlalu dalam":                        "Too many domain levels",
+    "Hidden link":                          "Hidden link (anchor mismatch)",
+    "Gambar dengan ekstensi berbahaya":     "Image with dangerous extension",
+    "URL over-encoded":                     "Over-encoded URL (obfuscation)",
+    "Ekstensi file berbahaya":              "Dangerous file extension",
+    "Ekstensi ganda":                       "Double extension (file disguise)",
+    "Mention ekstensi berbahaya":           "Mention of dangerous extension",
+    "Pesan hanya berisi file berbahaya":    "File-only message with malicious attachment",
+    "URL ekstensi berbahaya":               "URL points to dangerous file",
+}
 
-    if file and file.name.endswith(".eml"):
-        parsed_text, links = parse_eml(file)
-        text += " " + parsed_text
+def translate_reason(r, lang):
+    mapping = REASON_MAP_EN if lang == "English" else REASON_MAP_ID
+    for key, val in mapping.items():
+        if key.lower() in r.lower():
+            # Preserve bracketed prefix like [Sender], [URL]
+            prefix = ""
+            if r.startswith("["):
+                prefix = r[:r.index("]")+2]
+                r_rest = r[len(prefix):]
+                for k2, v2 in mapping.items():
+                    if k2.lower() in r_rest.lower():
+                        return prefix + v2
+            return prefix + val
+    return r  # fallback: original
 
-    links += re.findall(r'http\S+', text)
+# =========================
+# LOGGING
+# =========================
+def log_data(sender, text, file, score, ai_score, rule_score, status, user_id):
+    urls    = extract_urls(text)
+    url_str = ", ".join(urls) if urls else "-"
+    file_ext = "-"
+    if file:
+        file_ext = file.name.split(".")[-1]
 
-    score, reasons = hybrid(text, sender, links)
-
-    if score < 0.3:
-        status = "SAFE"
-        css = "status-safe"
-    elif score < 0.6:
-        status = "SUSPICIOUS"
-        css = "status-warn"
-    else:
-        status = "PHISHING"
-        css = "status-danger"
-
-    st.markdown("## 🔍 Result")
-    st.markdown(f"<p class='{css}'>{status}</p>", unsafe_allow_html=True)
-    st.write(f"Score: {score*100:.2f}%")
-
-    for r in reasons:
-        st.write(f"- {r}")
-
-    # LOG
     new = pd.DataFrame([{
-        "user_id": st.session_state.user_id,
-        "time": datetime.now(),
-        "sender": sender,
-        "body": text,
-        "risk_score": round(score,4),
-        "status": status
+        "time":       datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "user_id":    user_id,
+        "sender":     sender,
+        "body":       text[:200],
+        "url":        url_str,
+        "file_ext":   file_ext,
+        "ai_score":   round(ai_score, 4),
+        "rule_score": round(rule_score, 4),
+        "risk_score": round(score, 4),
+        "status":     status,
     }])
 
     if os.path.exists("logs.csv"):
         old = pd.read_csv("logs.csv")
-        new = pd.concat([old,new])
-
+        new = pd.concat([old, new], ignore_index=True)
     new.to_csv("logs.csv", index=False)
 
 
 # =========================
-# FOOTER (UNCHANGED)
+# MAIN UI
+# =========================
+st.markdown("<div class='main-card'>", unsafe_allow_html=True)
+
+# --- Sender Email ---
+col_sender, col_hint_sender = st.columns([10, 1])
+with col_sender:
+    sender = st.text_input(
+        t("sender", lang) + " *",
+        placeholder="example@company.com" if lang == "English" else "contoh@email.com"
+    )
+with col_hint_sender:
+    st.markdown("<div style='padding-top:28px'>", unsafe_allow_html=True)
+    if st.button("💡", key="hint_btn_sender", help="Show hint"):
+        st.session_state.show_hint_sender = not st.session_state.show_hint_sender
+    st.markdown("</div>", unsafe_allow_html=True)
+
+if st.session_state.show_hint_sender:
+    st.markdown(
+        f"<div class='hint-popup'>{t('hint_sender', lang)}</div>",
+        unsafe_allow_html=True
+    )
+
+# Real-time email validation
+email_pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+email_valid   = bool(re.match(email_pattern, sender)) if sender else False
+
+if not sender:
+    st.markdown(
+        f"<p style='color:#f59e0b; font-size:13px; margin-top:-10px; font-style:italic;'>"
+        f"{t('sender_required', lang)}</p>",
+        unsafe_allow_html=True
+    )
+elif not email_valid:
+    st.markdown(
+        f"<p style='color:#f59e0b; font-size:13px; margin-top:-10px; font-style:italic;'>"
+        f"{t('sender_invalid', lang)}</p>",
+        unsafe_allow_html=True
+    )
+
+# --- Email Content ---
+col_content, col_hint_content = st.columns([10, 1])
+with col_content:
+    text = st.text_area(
+        t("content", lang),
+        height=180,
+        placeholder="e.g. Your account will be suspended..." if lang == "English"
+                    else "contoh: akun Anda akan diblokir, klik link berikut..."
+    )
+with col_hint_content:
+    st.markdown("<div style='padding-top:28px'>", unsafe_allow_html=True)
+    if st.button("💡", key="hint_btn_content", help="Show hint"):
+        st.session_state.show_hint_content = not st.session_state.show_hint_content
+    st.markdown("</div>", unsafe_allow_html=True)
+
+if st.session_state.show_hint_content:
+    st.markdown(
+        f"<div class='hint-popup'>{t('hint_content', lang)}</div>",
+        unsafe_allow_html=True
+    )
+
+# --- File Upload ---
+col_upload, col_hint_upload = st.columns([10, 1])
+with col_upload:
+    uploaded_file = st.file_uploader(
+        t("upload", lang),
+        type=None,
+        key="file_uploader"
+    )
+with col_hint_upload:
+    st.markdown("<div style='padding-top:28px'>", unsafe_allow_html=True)
+    if st.button("💡", key="hint_btn_upload", help="Show hint"):
+        st.session_state.show_hint_upload = not st.session_state.show_hint_upload
+    st.markdown("</div>", unsafe_allow_html=True)
+
+if st.session_state.show_hint_upload:
+    st.markdown(
+        f"<div class='hint-popup'>{t('hint_upload', lang).replace(chr(10), '<br>')}</div>",
+        unsafe_allow_html=True
+    )
+
+analyze = st.button(t("analyze", lang), use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
+
+# =========================
+# ANALYSIS
+# =========================
+if analyze:
+    if not sender:
+        st.warning(t("sender_required", lang))
+        st.stop()
+    if not re.match(email_pattern, sender):
+        st.warning(t("sender_invalid", lang))
+        st.stop()
+
+    # --- EML handling ---
+    eml_data  = None
+    raw_html  = None
+    eml_info  = {}
+
+    if uploaded_file and uploaded_file.name.lower().endswith(".eml"):
+        file_bytes = uploaded_file.read()
+        eml_data   = parse_eml(file_bytes)
+        raw_html   = eml_data.get("raw_html", "")
+        # Auto-populate text from EML if text area is empty
+        if not text.strip():
+            text = eml_data.get("body_plain", "")
+        # Auto-populate sender if still default
+        eml_from = eml_data.get("from_", "")
+        if eml_from and not re.match(email_pattern, sender):
+            sender = re.search(r'[\w\.\-]+@[\w\.\-]+\.\w+', eml_from)
+            sender = sender.group(0) if sender else sender
+
+    with st.spinner("Analyzing..." if lang == "English" else "Menganalisis..."):
+        final_score, ai_score, rule_score, reasons = hybrid_predict(
+            text, sender,
+            raw_html=raw_html,
+            uploaded_file=uploaded_file
+        )
+
+    final_score = max(0.0, min(float(final_score), 1.0))
+
+    # --- Contextual reason enrichment ---
+    if final_score < 0.3:
+        if not reasons:
+            reasons = [
+                t("no_suspicious", lang),
+                t("no_malicious", lang),
+                t("sender_normal", lang),
+            ]
+        else:
+            reasons.insert(0, t("low_risk", lang))
+    elif final_score < 0.6:
+        reasons.insert(0, t("some_suspicious", lang))
+    else:
+        reasons.insert(0, t("high_risk", lang))
+
+    # --- Status ---
+    if final_score < 0.3:
+        status = t("safe", lang)
+        css    = "status-safe"
+        emoji  = "✅"
+    elif final_score < 0.6:
+        status = t("suspicious", lang)
+        css    = "status-warn"
+        emoji  = "⚠️"
+    else:
+        status = t("phishing", lang)
+        css    = "status-danger"
+        emoji  = "🚨"
+
+    # --- Result display ---
+    st.markdown(t("result", lang))
+    st.markdown(f"<p class='{css}'>{emoji} Status: {status}</p>", unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric(t("score", lang).replace("⚠️ ", ""), f"{final_score*100:.1f}%")
+    col2.metric(t("ai_score", lang), f"{ai_score*100:.1f}%")
+    col3.metric(t("rule_score", lang), f"{rule_score*100:.1f}%")
+
+    st.progress(final_score)
+
+    st.markdown(t("reasons", lang))
+    for r in reasons:
+        st.write(f"• {translate_reason(r, lang)}")
+
+    # --- EML structural details ---
+    if eml_data:
+        with st.expander(t("eml_section", lang)):
+            st.markdown(f"**From:** {eml_data['from_']}")
+            st.markdown(f"**Subject:** {eml_data['subject']}")
+            if eml_data["attachments"]:
+                att_list = ", ".join(eml_data["attachments"])
+                st.markdown(
+                    f"**{'Attachments' if lang=='English' else 'Lampiran'}:** {att_list}"
+                )
+            # Show all links found in HTML
+            if eml_data["raw_html"]:
+                soup_links = BeautifulSoup(eml_data["raw_html"], "html.parser")
+                all_links  = [(a.get_text(strip=True), a["href"])
+                              for a in soup_links.find_all("a", href=True)]
+                if all_links:
+                    st.markdown(
+                        f"**{'Links found' if lang=='English' else 'Link ditemukan'} ({len(all_links)}):**"
+                    )
+                    for txt_lnk, href_lnk in all_links[:20]:
+                        st.write(f"  • `{href_lnk}` ← {txt_lnk[:60]}")
+
+    # --- Log ---
+    log_data(
+        sender, text, uploaded_file,
+        final_score, ai_score, rule_score, status,
+        st.session_state.current_user
+    )
+
+# =========================
+# FOOTER
 # =========================
 st.markdown("---")
-st.markdown("<div class='footer'>Copyright © 2026 Vicky Chandra. Some Rights Reserved.</div>", unsafe_allow_html=True)
+st.markdown(
+    "<div class='footer'>Copyright © 2026 Vicky Chandra. Some Rights Reserved.</div>",
+    unsafe_allow_html=True
+)
