@@ -55,59 +55,134 @@ st.set_page_config(
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
-# ============================================================
-# CUSTOM CSS
-# ============================================================
+# =========================
+# CUSTOM STYLE
+# =========================
 st.markdown("""
 <style>
 
+/* =========================
+   GLOBAL
+========================= */
+.block-container {
+    padding-top: 2rem;
+    max-width: 820px;
+}
+
+section.main > div {
+    padding-bottom: 0.3rem;
+}
+
+/* =========================
+   CARD
+========================= */
+.main-card {
+    padding: 24px;
+    border-radius: 18px;
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* =========================
+   STATUS
+========================= */
 .status-safe {
     color: #16a34a;
-    font-weight: bold;
+    font-weight: 700;
+    font-size: 18px;
 }
 
 .status-warn {
     color: #f59e0b;
-    font-weight: bold;
+    font-weight: 700;
+    font-size: 18px;
 }
 
 .status-danger {
     color: #dc2626;
-    font-weight: bold;
+    font-weight: 700;
+    font-size: 18px;
 }
 
+/* =========================
+   FOOTER
+========================= */
 .footer {
     text-align: center;
     font-size: 12px;
     color: gray;
+    margin-top: 20px;
 }
 
+/* =========================
+   BUTTON
+========================= */
 .stButton > button {
     width: 100%;
     height: 48px;
-    border-radius: 10px;
-    font-weight: bold;
+
+    border-radius: 12px;
+
+    font-size: 15px;
+    font-weight: 600;
 }
 
-.block-container {
-    padding-top: 2rem;
-}
-
-.main-card:hover {
-    box-shadow: 0px 8px 20px rgba(0,0,0,0.1);
-    transition: 0.3s;
-}
-
+/* =========================
+   INPUT
+========================= */
 input, textarea {
-    border-radius: 10px !important;
+    border-radius: 12px !important;
+    font-size: 15px !important;
 }
 
-div[data-testid="stProgressBar"] > div > div {
-    border-radius: 10px;
+/* textarea tinggi lebih enak */
+textarea {
+    line-height: 1.5 !important;
 }
 
-section.main > div {
-    padding-bottom: 10px;
+/* =========================
+   LABEL
+========================= */
+.input-label {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* =========================
+   HINT BUTTON
+========================= */
+.hint-btn button {
+    background: transparent !important;
+    border: none !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    min-height: auto !important;
+    height: auto !important;
+
+    font-size: 14px !important;
+
+    color: #f59e0b !important;
+
+    width: auto !important;
+
+    box-shadow: none !important;
+}
+
+.hint-btn button:hover {
+    color: #d97706 !important;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+section[data-testid="stSidebar"] .block-container {
+    padding-top: 1rem;
 }
 
 </style>
@@ -1016,14 +1091,28 @@ def log_data(sender, text, file, score, status):
 # ============================================================
 def hint(label, message):
 
-    col1, col2 = st.columns([20, 1])
+    col1, col2 = st.columns([30, 1])
 
     with col1:
-        st.markdown(label)
+        st.markdown(
+            f"<div class='input-label'>{label}</div>",
+            unsafe_allow_html=True
+        )
 
     with col2:
-        with st.popover("❔"):
+
+        st.markdown(
+            "<div class='hint-btn'>",
+            unsafe_allow_html=True
+        )
+
+        with st.popover("💡"):
             st.write(message)
+
+        st.markdown(
+            "</div>",
+            unsafe_allow_html=True
+        )
 
 # ============================================================
 # MAIN UI
@@ -1037,7 +1126,7 @@ st.markdown(
 # SENDER
 # ============================================================
 hint(
-    f"### {t('sender')} *",
+    f"{t('sender')} *",
     t("hint_sender")
 )
 
@@ -1095,7 +1184,7 @@ elif sender and not email_valid:
 # EMAIL CONTENT
 # ============================================================
 hint(
-    f"### {t('content')}",
+    f"{t('content')}",
     t("hint_content")
 )
 
@@ -1113,7 +1202,7 @@ text = st.text_area(
 # FILE UPLOAD
 # ============================================================
 hint(
-    f"### {t('upload')}",
+    f"{t('upload')}",
     t("hint_upload")
 )
 
