@@ -97,6 +97,10 @@ section.main > div {
     margin-top: -8px;
     margin-bottom: 8px;
 }
+button[kind="secondary"] {
+    font-size: 14px;
+    padding: 4px 8px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -225,9 +229,13 @@ with st.sidebar:
             df_user = df_all  # backward compat if old logs exist
 
         if not df_user.empty:
-            display_cols = ["time", "sender", "risk_score", "status"]
-            existing_cols = [c for c in display_cols if c in df_user.columns]
-            st.dataframe(df_user[existing_cols].tail(10), use_container_width=True)
+            display_cols = [
+                "time", "sender", "body", "url",
+                "file_ext", "risk_score", "status"
+            ]
+            
+            existing_cols = [c for c in display_cols if c in df_all.columns]
+            st.dataframe(df_all[existing_cols].tail(20), use_container_width=True)
         else:
             st.info(t("no_logs", lang))
     else:
@@ -780,17 +788,17 @@ def log_data(sender, text, file, score, ai_score, rule_score, status, user_id):
 st.markdown("<div class='main-card'>", unsafe_allow_html=True)
 
 # --- Sender Email ---
-col_sender, col_hint_sender = st.columns([10, 1])
+col_sender, col_hint = st.columns([10,1])
+
 with col_sender:
     sender = st.text_input(
         t("sender", lang) + " *",
-        placeholder="example@company.com" if lang == "English" else "contoh@email.com"
+        placeholder="example@company.com" if lang=="English" else "contoh@email.com"
     )
-with col_hint_sender:
-    st.markdown("<div style='padding-top:28px'>", unsafe_allow_html=True)
-    if st.button("💡", key="hint_btn_sender", help="Show hint"):
-        st.session_state.show_hint_sender = not st.session_state.show_hint_sender
-    st.markdown("</div>", unsafe_allow_html=True)
+
+with col_hint:
+    with st.popover("ⓘ"):
+        st.write(t("hint_sender", lang))
 
 if st.session_state.show_hint_sender:
     st.markdown(
@@ -816,19 +824,18 @@ elif not email_valid:
     )
 
 # --- Email Content ---
-col_content, col_hint_content = st.columns([10, 1])
+col_content, col_hint = st.columns([10,1])
+
 with col_content:
     text = st.text_area(
         t("content", lang),
         height=180,
-        placeholder="e.g. Your account will be suspended..." if lang == "English"
-                    else "contoh: akun Anda akan diblokir, klik link berikut..."
+        placeholder="e.g. Your account will be suspended..."
     )
-with col_hint_content:
-    st.markdown("<div style='padding-top:28px'>", unsafe_allow_html=True)
-    if st.button("💡", key="hint_btn_content", help="Show hint"):
-        st.session_state.show_hint_content = not st.session_state.show_hint_content
-    st.markdown("</div>", unsafe_allow_html=True)
+
+with col_hint:
+    with st.popover("ⓘ"):
+        st.write(t("hint_content", lang))
 
 if st.session_state.show_hint_content:
     st.markdown(
@@ -837,18 +844,14 @@ if st.session_state.show_hint_content:
     )
 
 # --- File Upload ---
-col_upload, col_hint_upload = st.columns([10, 1])
+col_upload, col_hint = st.columns([10,1])
+
 with col_upload:
-    uploaded_file = st.file_uploader(
-        t("upload", lang),
-        type=None,
-        key="file_uploader"
-    )
-with col_hint_upload:
-    st.markdown("<div style='padding-top:28px'>", unsafe_allow_html=True)
-    if st.button("💡", key="hint_btn_upload", help="Show hint"):
-        st.session_state.show_hint_upload = not st.session_state.show_hint_upload
-    st.markdown("</div>", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader(t("upload", lang))
+
+with col_hint:
+    with st.popover("ⓘ"):
+        st.write(t("hint_upload", lang))
 
 if st.session_state.show_hint_upload:
     st.markdown(
