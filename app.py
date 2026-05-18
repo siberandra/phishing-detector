@@ -205,18 +205,27 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown(f"## {t('history', lang)}")
-
+    
     LOG_FILE = "logs.csv"
     current_user = st.session_state.current_user
-
+    
     if os.path.exists(LOG_FILE):
         df_all = pd.read_csv(LOG_FILE)
-
-        # Show ALL logs (public history)
-        df_user = df_all
-            
+    
+        if not df_all.empty:
+            # Kolom yang mau ditampilkan
+            display_cols = [
+                "time", "sender", "body", "url",
+                "file_ext", "risk_score", "status"
+            ]
+    
             existing_cols = [c for c in display_cols if c in df_all.columns]
-            st.dataframe(df_all[existing_cols].tail(20), use_container_width=True)
+    
+            # ✅ Tampilkan SEMUA history (public)
+            st.dataframe(
+                df_all[existing_cols].tail(20),
+                use_container_width=True
+            )
         else:
             st.info(t("no_logs", lang))
     else:
