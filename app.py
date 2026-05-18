@@ -490,20 +490,20 @@ def check_domain_tld(domain):
     else:
         # jalankan typosquatting check
     
-    # Typosquatting TLD (FIXED)
-    for legit in LEGIT_TLDS:
-        # split domain jadi bagian
-        parts = full.split(".")
-        
-        # contoh: studentsite.gunadarma.ac.id → ['studentsite','gunadarma','ac','id']
-        legit_parts = legit.split(".")  # ['ac','id']
-        
-        # cek apakah legit muncul tapi BUKAN di posisi akhir
-        if len(parts) > len(legit_parts):
-            if parts[-len(legit_parts):] != legit_parts and legit in full:
-                risk += 50
-                reasons.append(f"TLD resmi '{legit}' disisipkan di tengah (typosquatting)")
-                break
+        # Typosquatting TLD (FIXED)
+        for legit in LEGIT_TLDS:
+            # split domain jadi bagian
+            parts = full.split(".")
+            
+            # contoh: studentsite.gunadarma.ac.id → ['studentsite','gunadarma','ac','id']
+            legit_parts = legit.split(".")  # ['ac','id']
+            
+            # cek apakah legit muncul tapi BUKAN di posisi akhir
+            if len(parts) > len(legit_parts):
+                if parts[-len(legit_parts):] != legit_parts and legit in full:
+                    risk += 50
+                    reasons.append(f"TLD resmi '{legit}' disisipkan di tengah (typosquatting)")
+                    break
 
     if len(full.split(".")) > 5 and suffix not in LEGIT_TLDS:
         risk += 20
