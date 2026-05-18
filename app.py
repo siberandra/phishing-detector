@@ -534,7 +534,7 @@ def rule_based_score(text, sender_email, raw_html=None):
         s_suffix = ""
 
     if s_suffix in LEGIT_TLDS:
-        score -= 20
+        score -= 30
         reasons.append(f"Domain pengirim resmi: .{s_suffix}")
 
     if sender_domain in FREE_MAIL and any(kw in t_lower for kw in INST_KW):
