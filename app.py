@@ -831,7 +831,7 @@ with col_content:
 #     st.markdown(
 #         f"<div class='hint-popup'>{t('hint_content', lang)}</div>",
 #         unsafe_allow_html=True
-    )
+#    )
 
 # --- File Upload ---
 # col_upload, col_hint = st.columns([10,1])
