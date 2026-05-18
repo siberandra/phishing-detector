@@ -212,17 +212,8 @@ with st.sidebar:
     if os.path.exists(LOG_FILE):
         df_all = pd.read_csv(LOG_FILE)
 
-        # Show only current user's logs
-        if "user_id" in df_all.columns:
-            df_user = df_all[df_all["user_id"] == current_user]
-        else:
-            df_user = df_all  # backward compat if old logs exist
-
-        if not df_user.empty:
-            display_cols = [
-                "time", "sender", "body", "url",
-                "file_ext", "risk_score", "status"
-            ]
+        # Show ALL logs (public history)
+        df_user = df_all
             
             existing_cols = [c for c in display_cols if c in df_all.columns]
             st.dataframe(df_all[existing_cols].tail(20), use_container_width=True)
@@ -889,8 +880,9 @@ if analyze:
 
     final_score = max(0.0, min(float(final_score), 1.0))
 
-    # --- Contextual reason enrichment ---
+    # --- Contextual reason enrichment (strict by status) ---
     if final_score < 0.3:
+        # SAFE → hanya alasan aman
         if not reasons:
             reasons = [
                 t("no_suspicious", lang),
@@ -898,11 +890,15 @@ if analyze:
                 t("sender_normal", lang),
             ]
         else:
-            reasons.insert(0, t("low_risk", lang))
+            reasons = [t("no_suspicious", lang)] + reasons[:2]
+    
     elif final_score < 0.6:
-        reasons.insert(0, t("some_suspicious", lang))
+        # SUSPICIOUS → hanya alasan mencurigakan
+        reasons = [t("some_suspicious", lang)] + reasons
+    
     else:
-        reasons.insert(0, t("high_risk", lang))
+        # PHISHING → alasan kuat phishing
+        reasons = [t("high_risk", lang)] + reasons
 
     # --- Status ---
     if final_score < 0.3:
