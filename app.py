@@ -558,22 +558,31 @@ def rule_based_score(text, sender_email, raw_html=None):
             reasons += [f"[URL] {r}" for r in tld_r]
             break
 
-    # Sender–URL domain mismatch
+    # Sender–URL domain mismatch (smart version)
     if urls and sender_domain:
-        try:
-            s_reg = tldextract.extract(sender_domain).registered_domain
-        except Exception:
-            s_reg = ""
+        s_reg = get_registered_domain(sender_domain)
+        sender_trusted = is_trusted_domain(sender_domain)
+    
         for url in urls:
             ud = re.sub(r'https?://', '', url).split('/')[0].replace('www.', '')
-            try:
-                u_reg = tldextract.extract(ud).registered_domain
-            except Exception:
-                u_reg = ""
-            if s_reg and u_reg and s_reg != u_reg:
-                score += 30
+            u_reg = get_registered_domain(ud)
+    
+            if not s_reg or not u_reg:
+                continue
+    
+            # ✅ SAME ROOT DOMAIN → AMAN (subdomain beda gapapa)
+            if s_reg == u_reg:
+                continue
+    
+            # ✅ Kalau sender trusted → jangan terlalu keras
+            if sender_trusted:
+                score += 10   # ringan aja
+                reasons.append(f"External link from trusted domain: {u_reg}")
+            else:
+                score += 30   # tetap keras kalau bukan trusted
                 reasons.append(f"Mismatch: sender={s_reg} ≠ url={u_reg}")
-                break
+    
+            break
 
     if len(urls) > 3:
         score += 20
