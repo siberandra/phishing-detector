@@ -86,17 +86,7 @@ div[data-testid="stProgressBar"] > div > div {
 section.main > div {
     padding-bottom: 10px;
 }
-/* Hint icon button styling */
-.hint-popup {
-    background: #f0f9ff;
-    border: 1px solid #bae6fd;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 13px;
-    color: #0369a1;
-    margin-top: -8px;
-    margin-bottom: 8px;
-}
+
 button[kind="secondary"] {
     font-size: 14px;
     padding: 4px 8px;
@@ -107,12 +97,12 @@ button[kind="secondary"] {
 # =========================
 # SESSION STATE INIT
 # =========================
-if "show_hint_sender" not in st.session_state:
-    st.session_state.show_hint_sender = False
-if "show_hint_content" not in st.session_state:
-    st.session_state.show_hint_content = False
-if "show_hint_upload" not in st.session_state:
-    st.session_state.show_hint_upload = False
+# if "show_hint_sender" not in st.session_state:
+#     st.session_state.show_hint_sender = False
+# if "show_hint_content" not in st.session_state:
+#     st.session_state.show_hint_content = False
+# if "show_hint_upload" not in st.session_state:
+#     st.session_state.show_hint_upload = False
 if "current_user" not in st.session_state:
     # Simulate user identity via session (simple unique ID per session)
     import uuid
@@ -141,9 +131,9 @@ TRANSLATIONS = {
         "no_logs_delete":   "No logs to delete",
         "logs_cleared":     "Your history cleared successfully",
         "eml_section":      "### 🔬 EML Structure Analysis",
-        "hint_sender":      "ℹ️ Copy and paste the sender's email address here exactly as it appears in the email header (e.g. no-reply@company.com).",
-        "hint_content":     "ℹ️ Copy and paste the full body text of the email here. Include all paragraphs, links, and any visible text.",
-        "hint_upload":      "ℹ️ Upload any file you received from the email. Do NOT open or run it — just upload it here for safety analysis.\n\nYou can also upload the entire email as an .eml file: in most email clients, use 'Save As' or 'Download' → '.eml' to export the email, then upload it here. This enables deeper link and structure analysis.",
+        # "hint_sender":      "ℹ️ Copy and paste the sender's email address here exactly as it appears in the email header (e.g. no-reply@company.com).",
+        # "hint_content":     "ℹ️ Copy and paste the full body text of the email here. Include all paragraphs, links, and any visible text.",
+        # "hint_upload":      "ℹ️ Upload any file you received from the email. Do NOT open or run it — just upload it here for safety analysis.\n\nYou can also upload the entire email as an .eml file: in most email clients, use 'Save As' or 'Download' → '.eml' to export the email, then upload it here. This enables deeper link and structure analysis.",
         "sender_required":  "Sender email is required",
         "sender_invalid":   "Please enter a valid email format (e.g. example@domain.com)",
         "low_risk":         "Low risk detected",
@@ -174,9 +164,9 @@ TRANSLATIONS = {
         "no_logs_delete":   "Tidak ada riwayat untuk dihapus",
         "logs_cleared":     "Riwayat Anda berhasil dihapus",
         "eml_section":      "### 🔬 Analisis Struktur EML",
-        "hint_sender":      "ℹ️ Salin dan tempel alamat email pengirim di sini persis seperti yang tertera di header email (contoh: no-reply@perusahaan.com).",
-        "hint_content":     "ℹ️ Salin semua isi email ke sini. Termasuk semua paragraf, link, dan teks yang tampak di badan email.",
-        "hint_upload":      "ℹ️ Silakan upload file yang Anda terima dari email. Cukup upload saja — JANGAN dibuka atau dijalankan.\n\nAnda juga bisa upload isi email secara keseluruhan dengan mengunduh email menjadi file .eml: di sebagian besar aplikasi email, pilih 'Simpan Sebagai' atau 'Unduh' → '.eml', lalu upload di sini. Ini memungkinkan analisis link tersembunyi yang lebih mendalam.",
+        # "hint_sender":      "ℹ️ Salin dan tempel alamat email pengirim di sini persis seperti yang tertera di header email (contoh: no-reply@perusahaan.com).",
+        # "hint_content":     "ℹ️ Salin semua isi email ke sini. Termasuk semua paragraf, link, dan teks yang tampak di badan email.",
+        # "hint_upload":      "ℹ️ Silakan upload file yang Anda terima dari email. Cukup upload saja — JANGAN dibuka atau dijalankan.\n\nAnda juga bisa upload isi email secara keseluruhan dengan mengunduh email menjadi file .eml: di sebagian besar aplikasi email, pilih 'Simpan Sebagai' atau 'Unduh' → '.eml', lalu upload di sini. Ini memungkinkan analisis link tersembunyi yang lebih mendalam.",
         "sender_required":  "Email pengirim wajib diisi",
         "sender_invalid":   "Format email tidak valid (contoh: nama@email.com)",
         "low_risk":         "Risiko rendah terdeteksi",
@@ -788,7 +778,7 @@ def log_data(sender, text, file, score, ai_score, rule_score, status, user_id):
 st.markdown("<div class='main-card'>", unsafe_allow_html=True)
 
 # --- Sender Email ---
-col_sender, col_hint = st.columns([10,1])
+# col_sender, col_hint = st.columns([10,1])
 
 with col_sender:
     sender = st.text_input(
@@ -796,15 +786,15 @@ with col_sender:
         placeholder="example@company.com" if lang=="English" else "contoh@email.com"
     )
 
-with col_hint:
-    with st.popover("ⓘ"):
-        st.write(t("hint_sender", lang))
+# with col_hint:
+#     with st.popover("ⓘ"):
+#         st.write(t("hint_sender", lang))
 
-if st.session_state.show_hint_sender:
-    st.markdown(
-        f"<div class='hint-popup'>{t('hint_sender', lang)}</div>",
-        unsafe_allow_html=True
-    )
+# if st.session_state.show_hint_sender:
+#     st.markdown(
+#         f"<div class='hint-popup'>{t('hint_sender', lang)}</div>",
+#         unsafe_allow_html=True
+#     )
 
 # Real-time email validation
 email_pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
@@ -824,7 +814,7 @@ elif not email_valid:
     )
 
 # --- Email Content ---
-col_content, col_hint = st.columns([10,1])
+# col_content, col_hint = st.columns([10,1])
 
 with col_content:
     text = st.text_area(
@@ -833,31 +823,31 @@ with col_content:
         placeholder="e.g. Your account will be suspended..."
     )
 
-with col_hint:
-    with st.popover("ⓘ"):
-        st.write(t("hint_content", lang))
+# with col_hint:
+#     with st.popover("ⓘ"):
+#         st.write(t("hint_content", lang))
 
-if st.session_state.show_hint_content:
-    st.markdown(
-        f"<div class='hint-popup'>{t('hint_content', lang)}</div>",
-        unsafe_allow_html=True
+# if st.session_state.show_hint_content:
+#     st.markdown(
+#         f"<div class='hint-popup'>{t('hint_content', lang)}</div>",
+#         unsafe_allow_html=True
     )
 
 # --- File Upload ---
-col_upload, col_hint = st.columns([10,1])
+# col_upload, col_hint = st.columns([10,1])
 
 with col_upload:
     uploaded_file = st.file_uploader(t("upload", lang))
 
-with col_hint:
-    with st.popover("ⓘ"):
-        st.write(t("hint_upload", lang))
+# with col_hint:
+#     with st.popover("ⓘ"):
+#         st.write(t("hint_upload", lang))
 
-if st.session_state.show_hint_upload:
-    st.markdown(
-        f"<div class='hint-popup'>{t('hint_upload', lang).replace(chr(10), '<br>')}</div>",
-        unsafe_allow_html=True
-    )
+# if st.session_state.show_hint_upload:
+#     st.markdown(
+#         f"<div class='hint-popup'>{t('hint_upload', lang).replace(chr(10), '<br>')}</div>",
+#         unsafe_allow_html=True
+#     )
 
 analyze = st.button(t("analyze", lang), use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
