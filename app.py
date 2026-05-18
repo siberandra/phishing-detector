@@ -780,11 +780,11 @@ st.markdown("<div class='main-card'>", unsafe_allow_html=True)
 # --- Sender Email ---
 # col_sender, col_hint = st.columns([10,1])
 
-with col_sender:
-    sender = st.text_input(
-        t("sender", lang) + " *",
-        placeholder="example@company.com" if lang=="English" else "contoh@email.com"
-    )
+# with col_sender:
+sender = st.text_input(
+    t("sender", lang) + " *",
+    placeholder="example@company.com" if lang=="English" else "contoh@email.com"
+)
 
 # with col_hint:
 #     with st.popover("ⓘ"):
@@ -816,12 +816,12 @@ elif not email_valid:
 # --- Email Content ---
 # col_content, col_hint = st.columns([10,1])
 
-with col_content:
-    text = st.text_area(
-        t("content", lang),
-        height=180,
-        placeholder="e.g. Your account will be suspended..."
-    )
+# with col_content:
+text = st.text_area(
+    t("content", lang),
+    height=180,
+    placeholder="e.g. Your account will be suspended..."
+)
 
 # with col_hint:
 #     with st.popover("ⓘ"):
@@ -836,8 +836,7 @@ with col_content:
 # --- File Upload ---
 # col_upload, col_hint = st.columns([10,1])
 
-with col_upload:
-    uploaded_file = st.file_uploader(t("upload", lang))
+uploaded_file = st.file_uploader(t("upload", lang))
 
 # with col_hint:
 #     with st.popover("ⓘ"):
