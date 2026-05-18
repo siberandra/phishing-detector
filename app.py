@@ -446,6 +446,20 @@ def check_eml_structure(raw_html):
 # =========================
 # DOMAIN / TLD HELPERS
 # =========================
+def get_registered_domain(domain):
+    try:
+        ext = tldextract.extract(domain)
+        return ext.registered_domain.lower()
+    except:
+        return ""
+
+def is_trusted_domain(domain):
+    try:
+        suffix = tldextract.extract(domain).suffix.lower()
+        return suffix in LEGIT_TLDS
+    except:
+        return False
+
 def check_dangerous_ext_url(url_or_path):
     lower = url_or_path.lower().split("?")[0].split("#")[0]
     for ext in DANGEROUS_EXTENSIONS:
