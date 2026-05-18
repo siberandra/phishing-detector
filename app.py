@@ -639,8 +639,8 @@ def check_uploaded_file(filename):
 # HYBRID INFERENCE
 # (AI=0.70, Rule=0.30 — dinaikkan sesuai catatan notebook: Streamlit rule lebih kaya)
 # =========================
-AI_WEIGHT   = 0.70
-RULE_WEIGHT = 0.30
+AI_WEIGHT   = 0.55
+RULE_WEIGHT = 0.45
 
 def hybrid_predict(text, sender, raw_html=None, uploaded_file=None):
     """
