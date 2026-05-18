@@ -485,12 +485,13 @@ def check_domain_tld(domain):
         reasons.append(f"TLD mencurigakan: .{suffix}")
 
     for legit in LEGIT_TLDS:
-        if re.search(r'\.' + re.escape(legit) + r'\.', full):
+        parts = full.split(".")
+        if legit in full and not ".".join(parts[-2:]) == legit:
             risk += 50
             reasons.append(f"TLD resmi '{legit}' disisipkan di tengah (typosquatting)")
             break
 
-    if len(full.split(".")) > 4:
+    if len(full.split(".")) > 5 and suffix not in LEGIT_TLDS:
         risk += 20
         reasons.append(f"Domain {len(full.split('.'))} level (terlalu dalam)")
 
@@ -598,7 +599,7 @@ def rule_based_score(text, sender_email, raw_html=None):
     
             break
 
-    if len(urls) > 3:
+    if len(urls) > 4:
         score += 20
         reasons.append(f"Terlalu banyak link ({len(urls)})")
 
