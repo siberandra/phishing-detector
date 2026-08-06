@@ -86,7 +86,6 @@ div[data-testid="stProgressBar"] > div > div {
 section.main > div {
     padding-bottom: 10px;
 }
-
 button[kind="secondary"] {
     font-size: 14px;
     padding: 4px 8px;
@@ -307,13 +306,6 @@ DANGEROUS_EXTENSIONS = {
     '.jar','.class',
     '.hta',
 }
-
-URGENCY_KW = [
-    'urgent','immediately','suspended','verify now','action required',
-    'account disabled','click here','limited time','expires',
-    'segera','gratis','hadiah','promo','menang','klik sekarang',
-    'verifikasi','dibekukan','terpilih','klaim','berakhir','darurat',
-]
 
 FREE_MAIL = {'gmail.com','yahoo.com','hotmail.com','ymail.com','outlook.com'}
 INST_KW   = ['bank','paypal','shopee','tokopedia','bca','bri',
@@ -567,14 +559,6 @@ def rule_based_score(text, sender_email, raw_html=None):
         score   += eml_s
         reasons += eml_f
 
-    uc = sum(1 for kw in URGENCY_KW if kw in t_lower)
-    if uc >= 2:
-        score += 20
-        reasons.append(f"Banyak kata urgensi ({uc})")
-    elif uc == 1:
-        score += 10
-        reasons.append("Kata urgensi terdeteksi")
-
     if re.search(r'[a-z]+[0-9]+[a-z]+', t_lower):
         score += 10
         reasons.append("Pola leet/typo mencurigakan")
@@ -607,13 +591,12 @@ def check_uploaded_file(filename):
     return score, reasons
 
 # =========================
-# HYBRID INFERENCE (Updated to Best Weights: AI=95%, Rule=5% + Guardrail)
+# HYBRID INFERENCE (Optimal: AI=95%, Rule=5% + Guardrail)
 # =========================
 AI_WEIGHT   = 0.95
 RULE_WEIGHT = 0.05
 
 def hybrid_predict(text, sender, raw_html=None, uploaded_file=None):
-    # AI score via XLM-R / IndoBERT
     inputs = tokenizer(
         text, return_tensors="pt",
         truncation=True, padding=True, max_length=512
@@ -624,10 +607,8 @@ def hybrid_predict(text, sender, raw_html=None, uploaded_file=None):
         probs = torch.softmax(out.logits, dim=1).cpu().numpy()[0]
     ai_score = float(probs[1])
 
-    # Rule-based score
     rule_score, reasons = rule_based_score(text, sender, raw_html=raw_html)
 
-    # Uploaded file check (non-EML)
     if uploaded_file and not uploaded_file.name.lower().endswith(".eml"):
         fscore, freasons = check_uploaded_file(uploaded_file.name)
         rule_score = min(1.0, rule_score + fscore / 100.0)
@@ -636,10 +617,8 @@ def hybrid_predict(text, sender, raw_html=None, uploaded_file=None):
             rule_score = min(1.0, rule_score + 0.40)
             reasons.append("Pesan hanya berisi file berbahaya (file-only attack)")
 
-    # Kombinasi linier terbobot (Optimal: 95% AI, 5% Rule)
     final = AI_WEIGHT * ai_score + RULE_WEIGHT * rule_score
 
-    # High-Risk Technical Guardrail (Override jika rule mendeteksi bahaya tinggi >= 0.50)
     guardrail_triggered = False
     if rule_score >= 0.50 and final < 0.50:
         final = rule_score
@@ -658,8 +637,6 @@ REASON_MAP_ID = {
     "URL shortener terdeteksi":              "URL shortener terdeteksi",
     "Terlalu banyak link":                   "Terlalu banyak link",
     "Mismatch":                              "Ketidaksesuaian domain pengirim & URL",
-    "Banyak kata urgensi":                   "Banyak kata urgensi",
-    "Kata urgensi terdeteksi":               "Kata urgensi terdeteksi",
     "Pola leet/typo mencurigakan":           "Pola leet/typo mencurigakan",
     "TLD mencurigakan":                      "TLD mencurigakan",
     "typosquatting":                         "Typosquatting TLD",
@@ -685,8 +662,6 @@ REASON_MAP_EN = {
     "URL shortener terdeteksi":              "URL shortener detected",
     "Terlalu banyak link":                   "Too many links in body",
     "Mismatch":                              "Sender domain ≠ URL domain",
-    "Banyak kata urgensi":                   "Multiple urgency keywords",
-    "Kata urgensi terdeteksi":               "Urgency keyword detected",
     "Pola leet/typo mencurigakan":           "Suspicious leet/typo pattern",
     "TLD mencurigakan":                      "Suspicious TLD",
     "typosquatting":                         "TLD typosquatting detected",
