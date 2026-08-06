@@ -807,11 +807,11 @@ if analyze:
     else:
         reasons = [t("high_risk", lang)] + reasons
 
-    if final_score < 0.3:
+    if final_score <= 0.33:
         status = t("safe", lang)
         css    = "status-safe"
         emoji  = "✅"
-    elif final_score < 0.6:
+    elif final_score <= 0.66:
         status = t("suspicious", lang)
         css    = "status-warn"
         emoji  = "⚠️"
